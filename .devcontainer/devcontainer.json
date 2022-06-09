@@ -1,0 +1,61 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.224.2/containers/docker-existing-dockerfile
+{
+	"name": "CrossCompile",
+	// Sets the run context to one level up instead of the .devcontainer folder.
+	"context": "..",
+	// Update the 'dockerFile' property if you aren't using the standard 'Dockerfile' filename.
+	"dockerFile": "./Dockerfile",
+	// Set *default* container specific settings.json values on container create.
+	"settings": {},
+	// Add the IDs of extensions you want installed when the container is created.
+	"build": {
+		"target": "",
+		"args": {
+			"USERNAME": "${localEnv:USER}",
+			"ARCH": "arm64",
+			"CROSSBUILD": "aarch64-linux-gnu"
+			// "CC"=$CROSSBUILD\\-gcc
+			// "CXX"=$CROSSBUILD\\-g++,
+		}
+	},
+	"containerEnv": {
+		"REMOTE_USER": "uriu",
+		"REMOTE_HOST": "uriu-pi-lite64.local"
+	},
+	"extensions": [
+		"ms-vscode.cpptools-extension-pack",
+		"ms-vscode.hexeditor",
+		"mhutchie.git-graph"
+	],
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [],
+	// Uncomment the next line to run commands after the container is created - for example installing curl.
+	// "postCreateCommand": "sudo apt-get update && sudo apt-get upgrade -y",
+	// Uncomment when using a ptrace-based debugger like C++, Go, and Rust
+	"runArgs": [
+		"--net=host",
+		"-v",
+		"/${localEnv:HOME}/.ssh:/home/${env:USERNAME}/.ssh:rw",
+		// "-v",
+		// "/etc/group:/etc/group:ro",
+		// "-v",
+		// "/etc/passwd:/etc/passwd:ro",
+		// "-v",
+		// "/etc/shadow:/etc/shadow:ro",
+		// "-v",
+		// "/etc/sudoers.d:/etc/sudoers.d:ro",
+		"-v",
+		"/tmp/.X11-unix:/tmp/.X11-unix:rw",
+		"-v",
+		"/var/run/dbus:/var/run/dbus:ro",
+		"-v",
+		"/var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket"
+	]
+	// Uncomment to use the Docker CLI from inside the container. See https://aka.ms/vscode-remote/samples/docker-from-docker.
+	// "mounts": [],
+	// "workspaceMount": "source=${localWorkspaceFolder},target=/${localWorkspaceFolderBasename},type=bind",
+	// "workspaceFolder": "/${localWorkspaceFolderBasename}"
+	// Uncomment to connect as a non-root user if you've added one. See https://aka.ms/vscode-remote/containers/non-root.
+	// "remoteUser": "vscode"
+}

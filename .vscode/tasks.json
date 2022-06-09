@@ -1,0 +1,117 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "crossbuild-g++",
+            "command": "${env:CXX}",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-g",
+                "${workspaceFolder}/src/*.c*",
+                "-o",
+                "${workspaceFolder}/${workspaceFolderBasename}.elf",
+                "-Wall"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+            "detail": "クロスコンパイル"
+        },
+        {
+            "type": "shell",
+            "label": "rsync",
+            "command": "rsync",
+            "args": [
+                "-aRv",
+                "--delete",
+                "--exclude='.devcontainer/'",
+                "--exclude='.vscode/'",
+                "-e",
+                "\"ssh",
+                "-o",
+                "'StrictHostKeyChecking",
+                "no'\"",
+                "${workspaceFolder}",
+                "${env:REMOTE_USER}@${env:REMOTE_HOST}:/home/${env:REMOTE_USER}/"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "none",
+            "problemMatcher": []
+        },
+        {
+            "type": "shell",
+            "label": "gdbserver",
+            "command": "ssh",
+            "args": [
+                "-oStrictHostKeyChecking=no",
+                "${env:REMOTE_USER}@${env:REMOTE_HOST}",
+                "-X",
+                "\"",
+                "cd",
+                "/home/${env:REMOTE_USER}/${workspaceFolderBasename}",
+                "&&",
+                "gdbserver",
+                "localhost:10000",
+                "${workspaceFolderBasename}.elf",
+                "\""
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": [
+                    {
+                        "regexp": ".",
+                        "file": 1,
+                        "location": 2,
+                        "message": 3
+                    }
+                ],
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^.*Process*",
+                    "endsPattern": "^.*Listening*"
+                }
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            }
+        },
+        {
+            "type": "shell",
+            "label": "build tasks",
+            "dependsOn": [
+                "crossbuild-g++",
+                "rsync"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "type": "shell",
+            "label": "start debug",
+            "dependsOn": [
+                "build tasks",
+                "gdbserver"
+            ],
+            "dependsOrder": "sequence"
+        }
+    ]
+}
