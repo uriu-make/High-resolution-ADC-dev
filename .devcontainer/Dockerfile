@@ -13,7 +13,7 @@ RUN apt-get upgrade -q -y
 RUN apt-get install -y\
     sudo\
     bash-completion\
-    build-essential\
+    # build-essential\
     gnupg2\
     gdb\
     gdb-multiarch\
@@ -43,6 +43,7 @@ ENV PKG_CONFIG_PATH=/usr/lib/${CROSSBUILD}/pkgconfig:/usr/share/pkgconfig
 ENV PKG_CONFIG_LIBDIR=/usr/lib/${CROSSBUILD}/pkgconfig:/usr/share/pkgconfig
 ENV DISPLAY=:0
 ENV ARCH=$ARCH
+ENV CROSSBUILD=${CROSSBUILD}
 ENV CC=${CROSSBUILD}-gcc
 ENV CXX=${CROSSBUILD}-g++
 

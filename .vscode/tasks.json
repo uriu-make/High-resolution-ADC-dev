@@ -31,13 +31,14 @@
                 "--delete",
                 "--exclude='.devcontainer/'",
                 "--exclude='.vscode/'",
+                "--exclude='.git/'",
                 "-e",
                 "\"ssh",
                 "-o",
                 "'StrictHostKeyChecking",
                 "no'\"",
-                "${workspaceFolder}",
-                "${env:REMOTE_USER}@${env:REMOTE_HOST}:/home/${env:REMOTE_USER}/"
+                ".",
+                "${env:REMOTE_USER}@${env:REMOTE_HOST}:/home/${env:REMOTE_USER}/${workspaceFolderBasename}"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"

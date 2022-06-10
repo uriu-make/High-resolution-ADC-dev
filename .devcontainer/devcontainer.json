@@ -21,7 +21,7 @@
 	},
 	"containerEnv": {
 		"REMOTE_USER": "uriu",
-		"REMOTE_HOST": "uriu-pi-lite64.local"
+		"REMOTE_HOST": "s19f1009.local"
 	},
 	"extensions": [
 		"ms-vscode.cpptools-extension-pack",
@@ -51,11 +51,11 @@
 		"/var/run/dbus:/var/run/dbus:ro",
 		"-v",
 		"/var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket"
-	]
+	],
 	// Uncomment to use the Docker CLI from inside the container. See https://aka.ms/vscode-remote/samples/docker-from-docker.
 	// "mounts": [],
-	// "workspaceMount": "source=${localWorkspaceFolder},target=/${localWorkspaceFolderBasename},type=bind",
-	// "workspaceFolder": "/${localWorkspaceFolderBasename}"
+	"workspaceMount": "source=${localWorkspaceFolder},target=${localEnv:HOME}/${localWorkspaceFolderBasename},type=bind",
+	"workspaceFolder": "${localEnv:HOME}/${localWorkspaceFolderBasename}"
 	// Uncomment to connect as a non-root user if you've added one. See https://aka.ms/vscode-remote/containers/non-root.
 	// "remoteUser": "vscode"
 }
