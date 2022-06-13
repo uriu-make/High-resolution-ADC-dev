@@ -33,7 +33,7 @@ int main() {
   gpio_req.config.num_attrs = 1;
   gpio_req.config.attrs[0].mask = _BITULL(0);
   gpio_req.config.attrs[0].attr.id = GPIO_V2_LINE_ATTR_ID_FLAGS;
-  gpio_req.config.attrs[0].attr.flags = GPIO_V2_LINE_FLAG_INPUT /*| GPIO_V2_LINE_FLAG_EDGE_FALLING*/;  //入力、
+  gpio_req.config.attrs[0].attr.flags = GPIO_V2_LINE_FLAG_INPUT | GPIO_V2_LINE_FLAG_EDGE_FALLING;  //入力、
 
   ioctl(gpio_fd, GPIO_V2_GET_LINE_IOCTL, &gpio_req);
   if (gpio_req.fd <= 0) {
@@ -41,8 +41,7 @@ int main() {
     exit(0);
   }
 
-  // struct gpio_v2_line_event event;
-  struct gpio_v2_line_values values;
+  struct gpio_v2_line_event event;
 
   ioctl(spi_fd, SPI_IOC_WR_MODE, &mode);
   ioctl(spi_fd, SPI_IOC_RD_MODE, &mode);
@@ -79,11 +78,7 @@ int main() {
   arg[1].bits_per_word = 8;
   arg[1].cs_change = 0;
   for (int i = 0; i < 10; i++) {
-    values.mask = _BITULL(0);
-    do {
-      // read(gpio_req.fd, &event, sizeof(event));
-      ioctl(gpio_req.fd, GPIO_V2_LINE_GET_VALUES_IOCTL, &values);
-    } while (values.bits == 1);
+    read(gpio_req.fd, &event, sizeof(event));
     ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
     std::printf("%d: %d\n", i, rx[1] << 16 | rx[2] << 8 | rx[3]);
   }
