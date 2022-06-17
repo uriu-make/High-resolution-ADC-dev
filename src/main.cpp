@@ -8,6 +8,8 @@
 #include <time.h>
 #include <iostream>
 
+#define ADS1256_CLOCK 7680000
+
 union transfer {
   int32_t integer;
   __u8 separate[4];
@@ -47,7 +49,7 @@ int main() {
   gpio_req.config.attrs[1].mask = _BITULL(1);
   gpio_req.config.attrs[1].attr.id = GPIO_V2_LINE_ATTR_ID_FLAGS;
   gpio_req.config.attrs[1].attr.flags = GPIO_V2_LINE_FLAG_INPUT | GPIO_V2_LINE_FLAG_EDGE_FALLING;  //入力、High->Lowイベント検出
-  ioctl(gpio_fd, GPIO_V2_GET_LINE_IOCTL, &gpio_req);
+  ioctl(gpio_fd, GPIO_V2_GET_LINE_IOCTL, &gpio_req);                                               // gpioを設定 gpioイベントの検出はなし
 
   if (gpio_req.fd <= 0) {
     std::cout << "gpio request error." << std::endl;
@@ -65,7 +67,7 @@ int main() {
   value.bits = 0;
   value.mask = _BITULL(0);
   ioctl(gpio_req.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &value);
-  usleep(1000);
+  usleep(1);
   value.bits = _BITULL(0);
   value.mask = _BITULL(0);
   ioctl(gpio_req.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &value);
@@ -108,6 +110,7 @@ int main() {
   arg[0].rx_buf = (__u64)NULL;
   arg[0].len = 1;
   arg[0].delay_usecs = 0;
+  arg[0].cs_change = 0;
   arg[1].tx_buf = (__u64)NULL;
   arg[1].rx_buf = (__u64)&rx[1];
   arg[1].len = 3;
@@ -116,7 +119,7 @@ int main() {
   arg[1].bits_per_word = 8;
   arg[1].cs_change = 0;
 
-  gpio_req.config.num_attrs = 2;
+  gpio_req.config.num_attrs = 2;  // gpioイベントの検出を開始
   ioctl(gpio_req.fd, GPIO_V2_LINE_SET_CONFIG_IOCTL, &gpio_req.config);
 
   for (int i = 0; /*i < 1000*/; i++) {
@@ -125,8 +128,10 @@ int main() {
     data.separate[0] = rx[3];
     data.separate[1] = rx[2];
     data.separate[2] = rx[1];
-    std::printf(" %d\n%lf\r", i, (double)data.integer * 5 / 0x7FFFFF);
-    std::printf("\33[1A");
+    // std::printf(" %d\n%lf\r", i, (double)data.integer * 5 / 0x7FFFFF);
+    // std::printf("\33[1A");
+
+    std::printf("%lf\n", (double)data.integer * 5 / 0x7FFFFF);
     std::fflush(stdout);
   }
   return 0;
