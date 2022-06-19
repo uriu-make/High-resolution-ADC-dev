@@ -10,16 +10,11 @@
 
 #define ADS1256_CLOCK 7680000
 
-union transfer {
-  int32_t integer;
-  __u8 separate[4];
-};
-
 int main() {
-  transfer data;
-  data.integer = 0;
   __u8 tx[4] = {0, 0, 0, 0};
   __u8 rx[4] = {0, 0, 0, 0};
+  __u8 reg[11];
+
   __u8 mode = SPI_MODE_1;
   __u32 freq = 3000000;
 
@@ -49,10 +44,11 @@ int main() {
   gpio_req.config.attrs[1].mask = _BITULL(1);
   gpio_req.config.attrs[1].attr.id = GPIO_V2_LINE_ATTR_ID_FLAGS;
   gpio_req.config.attrs[1].attr.flags = GPIO_V2_LINE_FLAG_INPUT | GPIO_V2_LINE_FLAG_EDGE_FALLING;  //入力、High->Lowイベント検出
-  ioctl(gpio_fd, GPIO_V2_GET_LINE_IOCTL, &gpio_req);                                               // gpioを設定 gpioイベントの検出はなし
+
+  ioctl(gpio_fd, GPIO_V2_GET_LINE_IOCTL, &gpio_req);  // gpioを設定 gpioイベントの検出はなし
 
   if (gpio_req.fd <= 0) {
-    std::cout << "gpio request error." << std::endl;
+    std::cerr << "gpio request error." << std::endl;
     exit(0);
   }
 
@@ -76,10 +72,11 @@ int main() {
   memset(&arg, 0, sizeof(arg));
   memset(tx, 0, sizeof(tx));
   memset(rx, 0, sizeof(rx));
-  tx[0] = 0b01010000 | 0x03;
-  // tx[2] = 0b00000011;
-  // tx[2] = 0b11110000;
-  tx[2] = 0b01110010;
+  memset(reg, 0, sizeof(reg));
+  tx[0] = 0b00010000;
+  tx[1] = 10;
+  // tx[0] = 0b01010000 | 0x03;
+  // tx[2] = 0b01110010;
 
   arg[0].tx_buf = (__u64)&tx[0];
   arg[0].rx_buf = (__u64)NULL;
@@ -89,9 +86,9 @@ int main() {
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
 
-  arg[1].tx_buf = (__u64)&tx[2];
-  arg[1].rx_buf = (__u64)&rx[2];
-  arg[1].len = 1;
+  arg[1].tx_buf = (__u64)NULL;
+  arg[1].rx_buf = (__u64)&reg;
+  arg[1].len = 11;
   arg[1].delay_usecs = 0;
   arg[1].speed_hz = freq;
   arg[1].bits_per_word = 8;
@@ -99,12 +96,34 @@ int main() {
 
   usleep(1000);
 
-  ioctl(spi_fd, SPI_IOC_MESSAGE(2), &arg);
-  tx[0] = 0b01010000 | 0x01;
-  tx[2] = 0b00011000;
+  ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
+
+  reg[0] = reg[0] | 0b00000100;
+  reg[1] = 0b00001000;
+  reg[2] = 0b00000000;
+  // reg[3] = 0b01110010;
+  reg[3] = 0b10110000;
+
+  tx[0] = 0b01010000;
+  tx[1] = 3;
+  arg[0].tx_buf = (__u64)&tx[0];
+  arg[0].rx_buf = (__u64)NULL;
+  arg[0].len = 2;
+  arg[0].delay_usecs = 0;
+  arg[0].speed_hz = freq;
+  arg[0].bits_per_word = 8;
+  arg[0].cs_change = 0;
+
+  arg[1].tx_buf = (__u64)reg;
+  arg[1].rx_buf = (__u64)NULL;
+  arg[1].len = 4;
+  arg[1].delay_usecs = 0;
+  arg[1].speed_hz = freq;
+  arg[1].bits_per_word = 8;
+  arg[1].cs_change = 0;
+
   ioctl(spi_fd, SPI_IOC_MESSAGE(2), &arg);
 
-  // __u64 setup_time = monotime.tv_sec * 1000000000 + monotime.tv_nsec;
   tx[0] = 0b00000001;
   arg[0].tx_buf = (__u64)&tx[0];
   arg[0].rx_buf = (__u64)NULL;
@@ -125,13 +144,14 @@ int main() {
   for (int i = 0; /*i < 1000*/; i++) {
     read(gpio_req.fd, &event, sizeof(event));
     ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
-    data.separate[0] = rx[3];
-    data.separate[1] = rx[2];
-    data.separate[2] = rx[1];
+    // data.separate[0] = rx[3];
+    // data.separate[1] = rx[2];
+    // data.separate[2] = rx[1];
+
     // std::printf(" %d\n%lf\r", i, (double)data.integer * 5 / 0x7FFFFF);
     // std::printf("\33[1A");
 
-    std::printf("%lf\n", (double)data.integer * 5 / 0x7FFFFF);
+    std::printf("%lf\n", (double)(rx[3] << 16 | rx[2] << 8 | rx[1]) * 5 / 0x7FFFFF);
     std::fflush(stdout);
   }
   return 0;
