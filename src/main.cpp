@@ -11,15 +11,19 @@
 #define ADS1256_CLOCK 7680000
 
 int main() {
+  int data = 0;
   __u8 tx[4] = {0, 0, 0, 0};
   __u8 rx[4] = {0, 0, 0, 0};
   __u8 reg[11];
 
   __u8 mode = SPI_MODE_1;
-  __u32 freq = 3000000;
+  __u32 freq = 2000000;
+  unsigned short delay_sclk = std::ceil(50 * 1000000 / ADS1256_CLOCK);
+  double buf[10000];
 
   int gpio_fd = open("/dev/gpiochip0", O_RDWR | O_NONBLOCK);
   int spi_fd = open("/dev/spidev0.0", O_RDWR | O_NONBLOCK);
+
   if (gpio_fd <= 0) {
     std::cerr << "/dev/gpiochip0 is not open." << std::endl;
     exit(0);
@@ -56,8 +60,14 @@ int main() {
 
   ioctl(spi_fd, SPI_IOC_WR_MODE, &mode);
   ioctl(spi_fd, SPI_IOC_RD_MODE, &mode);
-  ioctl(spi_fd, SPI_IOC_WR_MAX_SPEED_HZ, &freq);
-  ioctl(spi_fd, SPI_IOC_RD_MAX_SPEED_HZ, &freq);
+  if (ioctl(spi_fd, SPI_IOC_WR_MAX_SPEED_HZ, &freq)) {
+    std::cerr << "speed error." << std::endl;
+    exit(0);
+  }
+  if (ioctl(spi_fd, SPI_IOC_RD_MAX_SPEED_HZ, &freq)) {
+    std::cerr << "speed error." << std::endl;
+    exit(0);
+  }
 
   struct gpio_v2_line_values value;
   value.bits = 0;
@@ -81,7 +91,7 @@ int main() {
   arg[0].tx_buf = (__u64)&tx[0];
   arg[0].rx_buf = (__u64)NULL;
   arg[0].len = 2;
-  arg[0].delay_usecs = 0;
+  arg[0].delay_usecs = delay_sclk;
   arg[0].speed_hz = freq;
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
@@ -99,22 +109,22 @@ int main() {
   ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
 
   reg[0] = reg[0] | 0b00000100;
-  reg[1] = 0b00001000;
+  reg[1] = 0b0001000;
   reg[2] = 0b00000000;
-  // reg[3] = 0b01110010;
-  reg[3] = 0b10110000;
+  reg[3] = 0b01110010;
+  // reg[3] = 0b10110000;
 
   tx[0] = 0b01010000;
   tx[1] = 3;
   arg[0].tx_buf = (__u64)&tx[0];
   arg[0].rx_buf = (__u64)NULL;
   arg[0].len = 2;
-  arg[0].delay_usecs = 0;
+  arg[0].delay_usecs = delay_sclk;
   arg[0].speed_hz = freq;
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
 
-  arg[1].tx_buf = (__u64)reg;
+  arg[1].tx_buf = (__u64)&reg;
   arg[1].rx_buf = (__u64)NULL;
   arg[1].len = 4;
   arg[1].delay_usecs = 0;
@@ -128,7 +138,7 @@ int main() {
   arg[0].tx_buf = (__u64)&tx[0];
   arg[0].rx_buf = (__u64)NULL;
   arg[0].len = 1;
-  arg[0].delay_usecs = 0;
+  arg[0].delay_usecs = delay_sclk;
   arg[0].cs_change = 0;
   arg[1].tx_buf = (__u64)NULL;
   arg[1].rx_buf = (__u64)&rx[1];
@@ -141,18 +151,35 @@ int main() {
   gpio_req.config.num_attrs = 2;  // gpioイベントの検出を開始
   ioctl(gpio_req.fd, GPIO_V2_LINE_SET_CONFIG_IOCTL, &gpio_req.config);
 
-  for (int i = 0; /*i < 1000*/; i++) {
+  for (int i = 0; i < 10000; i++) {
+    data = 0;
     read(gpio_req.fd, &event, sizeof(event));
     ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
-    // data.separate[0] = rx[3];
-    // data.separate[1] = rx[2];
-    // data.separate[2] = rx[1];
-
-    // std::printf(" %d\n%lf\r", i, (double)data.integer * 5 / 0x7FFFFF);
+    data = (rx[1] << 16) | (rx[2] << 8) | rx[3];
+    buf[i] = (double)data * 5 / 0x7FFFFF;
+    // std::printf(" %d\n%lf\r", i, (double)data * 5 / 0x7FFFFF);
     // std::printf("\33[1A");
 
-    std::printf("%lf\n", (double)(rx[3] << 16 | rx[2] << 8 | rx[1]) * 5 / 0x7FFFFF);
-    std::fflush(stdout);
+    // std::printf("%d %x:%x:%x,%lf\n", data, rx[1], rx[2], rx[3], (double)data * 5 / 0x7FFFFF);
+    // std::fflush(stdout);
   }
+  double sum = 0;
+  for (int i = 0; i < 10000; i++) {
+    sum += buf[i];
+  }
+  double ave = sum / 10000;
+  double variance = 0;
+  for (int i = 0; i < 10000; i++) {
+    variance += std::pow(ave - buf[i], 2);
+  }
+  variance = variance / 10000;
+
+  std::FILE *fp = std::fopen("data/test.csv", "w");
+  if (fp != NULL) {
+    for (int i = 0; i < 10000; i++) {
+      std::fprintf(fp, "%lf\n", buf[i]);
+    }
+  }
+  std::printf("ave:%lf variance:%lf\n", ave, variance);
   return 0;
 }

@@ -26,7 +26,8 @@
 	"extensions": [
 		"ms-vscode.cpptools-extension-pack",
 		"ms-vscode.hexeditor",
-		"mhutchie.git-graph"
+		"mhutchie.git-graph",
+		"GrapeCity.gc-excelviewer"
 	],
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	"forwardPorts": [],
