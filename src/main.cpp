@@ -68,7 +68,7 @@ int main() {
     std::cerr << "speed error." << std::endl;
     exit(0);
   }
-
+  //初期化
   struct gpio_v2_line_values value;
   value.bits = 0;
   value.mask = _BITULL(0);
@@ -78,6 +78,7 @@ int main() {
   value.mask = _BITULL(0);
   ioctl(gpio_req.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &value);
 
+  //初期設定読み込み
   struct spi_ioc_transfer arg[2];
   memset(&arg, 0, sizeof(arg));
   memset(tx, 0, sizeof(tx));
@@ -107,7 +108,7 @@ int main() {
   usleep(1000);
 
   ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
-
+  //設定変更
   reg[0] = reg[0] | 0b00000100;
   reg[1] = 0b0001000;
   reg[2] = 0b00000000;
@@ -133,8 +134,9 @@ int main() {
   arg[1].cs_change = 0;
 
   ioctl(spi_fd, SPI_IOC_MESSAGE(2), &arg);
-
+  //測定
   tx[0] = 0b00000001;
+
   arg[0].tx_buf = (__u64)&tx[0];
   arg[0].rx_buf = (__u64)NULL;
   arg[0].len = 1;
@@ -174,12 +176,12 @@ int main() {
   }
   variance = variance / 10000;
 
-  std::FILE *fp = std::fopen("data/test.csv", "w");
-  if (fp != NULL) {
-    for (int i = 0; i < 10000; i++) {
-      std::fprintf(fp, "%lf\n", buf[i]);
-    }
-  }
+  // std::FILE *fp = std::fopen("data/test.csv", "w");
+  // if (fp != NULL) {
+  //   for (int i = 0; i < 10000; i++) {
+  //     std::fprintf(fp, "%lf\n", buf[i]);
+  //   }
+  // }
   std::printf("ave:%lf variance:%lf\n", ave, variance);
   return 0;
 }
