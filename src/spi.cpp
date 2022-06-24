@@ -25,8 +25,18 @@ int spi::openSPI(const char dev[]) {
   return spi::fd;
 }
 int spi::spiMode(__u8 mode) {
-  ioctl(spi::fd, SPI_IOC_WR_MODE, &mode);
-  ioctl(spi::fd, SPI_IOC_RD_MODE, &mode);
+  int ret = ioctl(spi::fd, SPI_IOC_WR_MODE, &mode);
+  if (ret >= 0) {
+    ret = ioctl(spi::fd, SPI_IOC_RD_MODE, &mode);
+  }
+  return ret;
 }
 
-int spi::spiSpeed(__u32 speed_hz) {}
+int spi::spiSpeed(__u32 speed_hz) {
+  spi::speed = speed_hz;
+  int ret = ioctl(spi::fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed_hz);
+  if (ret >= 0) {
+    ioctl(spi::fd, SPI_IOC_RD_MAX_SPEED_HZ, &speed_hz);
+  }
+  return ret;
+}
