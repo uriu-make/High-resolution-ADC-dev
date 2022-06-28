@@ -36,7 +36,7 @@ int spi::spiSpeed(__u32 speed_hz) {
   spi::speed = speed_hz;
   int ret = ioctl(spi::fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed_hz);
   if (ret >= 0) {
-    ioctl(spi::fd, SPI_IOC_RD_MAX_SPEED_HZ, &speed_hz);
+    ret = ioctl(spi::fd, SPI_IOC_RD_MAX_SPEED_HZ, &speed_hz);
   }
   return ret;
 }
