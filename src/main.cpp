@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <iostream>
+#include <sys/time.h>
 
 #define ADS1256_CLOCK 7680000
 
@@ -20,6 +21,8 @@ int main() {
   __u32 freq = 2000000;
   unsigned short delay_sclk = std::ceil(50 * 1000000 / ADS1256_CLOCK);
   double buf[10000];
+
+  struct timeval t, t_old;
 
   int gpio_fd = open("/dev/gpiochip0", O_RDWR | O_NONBLOCK);
   int spi_fd = open("/dev/spidev0.0", O_RDWR | O_NONBLOCK);
@@ -112,8 +115,9 @@ int main() {
   reg[0] = reg[0] | 0b00000100;
   reg[1] = 0b0001000;
   reg[2] = 0b00000000;
-  reg[3] = 0b01110010;
+  // reg[3] = 0b01110010;
   // reg[3] = 0b10110000;
+  reg[3] = 0b11110000;
 
   tx[0] = 0b01010000;
   tx[1] = 3;
@@ -153,35 +157,41 @@ int main() {
   gpio_req.config.num_attrs = 2;  // gpioイベントの検出を開始
   ioctl(gpio_req.fd, GPIO_V2_LINE_SET_CONFIG_IOCTL, &gpio_req.config);
 
+  gettimeofday(&t_old, NULL);
+  std::printf("count,t,volt\n");
+  std::fflush(stdout);
   for (int i = 0; i < 10000; i++) {
     data = 0;
     read(gpio_req.fd, &event, sizeof(event));
+    gettimeofday(&t, NULL);
     ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
     data = (rx[1] << 16) | (rx[2] << 8) | rx[3];
     buf[i] = (double)data * 5 / 0x7FFFFF;
     // std::printf(" %d\n%lf\r", i, (double)data * 5 / 0x7FFFFF);
     // std::printf("\33[1A");
 
-    // std::printf("%d %x:%x:%x,%lf\n", data, rx[1], rx[2], rx[3], (double)data * 5 / 0x7FFFFF);
-    // std::fflush(stdout);
+    std::printf("%d,%ld,%lf\n", i, (t.tv_sec * 1000000 + t.tv_usec) - (t_old.tv_sec * 1000000 + t_old.tv_usec), (double)data * 5 / 0x7FFFFF);
+    std::fflush(stdout);
+    t_old.tv_sec = t.tv_sec;
+    t_old.tv_usec = t.tv_usec;
   }
-  double sum = 0;
-  for (int i = 0; i < 10000; i++) {
-    sum += buf[i];
-  }
-  double ave = sum / 10000;
-  double variance = 0;
-  for (int i = 0; i < 10000; i++) {
-    variance += std::pow(ave - buf[i], 2);
-  }
-  variance = variance / 10000;
-
-  // std::FILE *fp = std::fopen("data/test.csv", "w");
-  // if (fp != NULL) {
-  //   for (int i = 0; i < 10000; i++) {
-  //     std::fprintf(fp, "%lf\n", buf[i]);
-  //   }
+  // double sum = 0;
+  // for (int i = 0; i < 10000; i++) {
+  //   sum += buf[i];
   // }
-  std::printf("ave:%lf variance:%lf\n", ave, variance);
+  // double ave = sum / 10000;
+  // double variance = 0;
+  // for (int i = 0; i < 10000; i++) {
+  //   variance += std::pow(ave - buf[i], 2);
+  // }
+  // variance = variance / 10000;
+
+  // // std::FILE *fp = std::fopen("data/test.csv", "w");
+  // // if (fp != NULL) {
+  // //   for (int i = 0; i < 10000; i++) {
+  // //     std::fprintf(fp, "%lf\n", buf[i]);
+  // //   }
+  // // }
+  // std::printf("ave:%lf variance:%lf\n", ave, variance);
   return 0;
 }
