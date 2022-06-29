@@ -10,9 +10,16 @@
 #include <sys/time.h>
 
 #define ADS1256_CLOCK 7680000
+#define NUM 10000
+
+struct data {
+  double adc;
+  struct timeval time;
+  struct timeval old_time;
+};
 
 int main() {
-  int data = 0;
+  // int data = 0;
   __u8 tx[4] = {0, 0, 0, 0};
   __u8 rx[4] = {0, 0, 0, 0};
   __u8 reg[11];
@@ -20,8 +27,8 @@ int main() {
   __u8 mode = SPI_MODE_1;
   __u32 freq = 2000000;
   unsigned short delay_sclk = std::ceil(50 * 1000000 / ADS1256_CLOCK);
-  double buf[10000];
-
+  int buf;
+  struct data data[NUM];
   struct timeval t, t_old;
 
   int gpio_fd = open("/dev/gpiochip0", O_RDWR | O_NONBLOCK);
@@ -115,8 +122,6 @@ int main() {
   reg[0] = reg[0] | 0b00000100;
   reg[1] = 0b0001000;
   reg[2] = 0b00000000;
-  // reg[3] = 0b01110010;
-  // reg[3] = 0b10110000;
   reg[3] = 0b11110000;
 
   tx[0] = 0b01010000;
@@ -157,41 +162,26 @@ int main() {
   gpio_req.config.num_attrs = 2;  // gpioイベントの検出を開始
   ioctl(gpio_req.fd, GPIO_V2_LINE_SET_CONFIG_IOCTL, &gpio_req.config);
 
-  gettimeofday(&t_old, NULL);
+  gettimeofday(&data[0].old_time, NULL);
+  for (int i = 0; i < NUM; i++) {
+    read(gpio_req.fd, &event, sizeof(event));
+    gettimeofday(&data[i].time, NULL);
+    ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
+    buf = (rx[1] << 16) | (rx[2] << 8) | rx[3];
+    data[i].adc = (double)buf * 5 / 0x7FFFFF;
+  }
+
+  for (int i = 1; i < NUM; i++) {
+    data[i].old_time = data[i - 1].time;
+  }
+
   std::printf("count,t,volt\n");
   std::fflush(stdout);
-  for (int i = 0; i < 10000; i++) {
-    data = 0;
-    read(gpio_req.fd, &event, sizeof(event));
-    gettimeofday(&t, NULL);
-    ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
-    data = (rx[1] << 16) | (rx[2] << 8) | rx[3];
-    buf[i] = (double)data * 5 / 0x7FFFFF;
-    // std::printf(" %d\n%lf\r", i, (double)data * 5 / 0x7FFFFF);
-    // std::printf("\33[1A");
-
-    std::printf("%d,%ld,%lf\n", i, (t.tv_sec * 1000000 + t.tv_usec) - (t_old.tv_sec * 1000000 + t_old.tv_usec), (double)data * 5 / 0x7FFFFF);
-    std::fflush(stdout);
-    t_old.tv_sec = t.tv_sec;
-    t_old.tv_usec = t.tv_usec;
+  for (int i = 0; i < NUM; i++) {
+    std::printf("%d,%ld,%lf\n",
+                i,
+                (data[i].time.tv_sec * 1000000 + data[i].time.tv_usec) - (data[i].old_time.tv_sec * 1000000 + data[i].old_time.tv_usec),
+                data[i].adc);
   }
-  // double sum = 0;
-  // for (int i = 0; i < 10000; i++) {
-  //   sum += buf[i];
-  // }
-  // double ave = sum / 10000;
-  // double variance = 0;
-  // for (int i = 0; i < 10000; i++) {
-  //   variance += std::pow(ave - buf[i], 2);
-  // }
-  // variance = variance / 10000;
-
-  // // std::FILE *fp = std::fopen("data/test.csv", "w");
-  // // if (fp != NULL) {
-  // //   for (int i = 0; i < 10000; i++) {
-  // //     std::fprintf(fp, "%lf\n", buf[i]);
-  // //   }
-  // // }
-  // std::printf("ave:%lf variance:%lf\n", ave, variance);
   return 0;
 }
