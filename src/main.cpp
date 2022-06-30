@@ -28,8 +28,7 @@ int main() {
   __u32 freq = 2000000;
   unsigned short delay_sclk = std::ceil(50 * 1000000 / ADS1256_CLOCK);
   int buf;
-  struct data data[NUM];
-  struct timeval t, t_old;
+  struct data data[NUM + 1];
 
   int gpio_fd = open("/dev/gpiochip0", O_RDWR | O_NONBLOCK);
   int spi_fd = open("/dev/spidev0.0", O_RDWR | O_NONBLOCK);
@@ -120,9 +119,11 @@ int main() {
   ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
   //設定変更
   reg[0] = reg[0] | 0b00000100;
-  reg[1] = 0b0001000;
+  reg[1] = 0b00001000;
   reg[2] = 0b00000000;
-  reg[3] = 0b11110000;
+  reg[3] = 0b10000010;
+  // reg[3] = 0b10110000;
+  // reg[3] = 0b11110000;
 
   tx[0] = 0b01010000;
   tx[1] = 3;
@@ -163,7 +164,7 @@ int main() {
   ioctl(gpio_req.fd, GPIO_V2_LINE_SET_CONFIG_IOCTL, &gpio_req.config);
 
   gettimeofday(&data[0].old_time, NULL);
-  for (int i = 0; i < NUM; i++) {
+  for (int i = 0; i < NUM + 1; i++) {
     read(gpio_req.fd, &event, sizeof(event));
     gettimeofday(&data[i].time, NULL);
     ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
@@ -171,13 +172,13 @@ int main() {
     data[i].adc = (double)buf * 5 / 0x7FFFFF;
   }
 
-  for (int i = 1; i < NUM; i++) {
+  for (int i = 1; i < NUM + 1; i++) {
     data[i].old_time = data[i - 1].time;
   }
 
   std::printf("count,t,volt\n");
   std::fflush(stdout);
-  for (int i = 0; i < NUM; i++) {
+  for (int i = 1; i < NUM + 1; i++) {
     std::printf("%d,%ld,%lf\n",
                 i,
                 (data[i].time.tv_sec * 1000000 + data[i].time.tv_usec) - (data[i].old_time.tv_sec * 1000000 + data[i].old_time.tv_usec),
