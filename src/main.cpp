@@ -166,8 +166,8 @@ int main() {
   gettimeofday(&data[0].old_time, NULL);
   for (int i = 0; i < NUM + 1; i++) {
     read(gpio_req.fd, &event, sizeof(event));
-    gettimeofday(&data[i].time, NULL);
     ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
+    gettimeofday(&data[i].time, NULL);
     buf = (rx[1] << 16) | (rx[2] << 8) | rx[3];
     data[i].adc = (double)buf * 5 / 0x7FFFFF;
   }
