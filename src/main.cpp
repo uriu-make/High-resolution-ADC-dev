@@ -10,12 +10,12 @@
 #include <sys/time.h>
 
 #define ADS1256_CLOCK 7680000
-#define NUM 10000
+#define NUM           10000
 
 struct data {
-  double adc;
+  int adc;
   struct timeval time;
-  struct timeval old_time;
+  struct timeval rate;
 };
 
 int main() {
@@ -25,7 +25,7 @@ int main() {
   __u8 reg[11];
 
   __u8 mode = SPI_MODE_1;
-  __u32 freq = 2000000;
+  __u32 freq = 1900000;
   unsigned short delay_sclk = std::ceil(50 * 1000000 / ADS1256_CLOCK);
   int buf;
   struct data data[NUM + 1];
@@ -119,11 +119,11 @@ int main() {
   ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
   //設定変更
   reg[0] = reg[0] | 0b00000100;
-  reg[1] = 0b00001000;
+  reg[1] = 0b01110110;
   reg[2] = 0b00000000;
-  reg[3] = 0b10000010;
-  // reg[3] = 0b10110000;
-  // reg[3] = 0b11110000;
+  // reg[3] = 0b10000100;
+  // reg[3] = 0b01110010;
+  reg[3] = 0b11110000;
 
   tx[0] = 0b01010000;
   tx[1] = 3;
@@ -144,6 +144,7 @@ int main() {
   arg[1].cs_change = 0;
 
   ioctl(spi_fd, SPI_IOC_MESSAGE(2), &arg);
+
   //測定
   tx[0] = 0b00000001;
 
@@ -163,25 +164,34 @@ int main() {
   gpio_req.config.num_attrs = 2;  // gpioイベントの検出を開始
   ioctl(gpio_req.fd, GPIO_V2_LINE_SET_CONFIG_IOCTL, &gpio_req.config);
 
-  gettimeofday(&data[0].old_time, NULL);
-  for (int i = 0; i < NUM + 1; i++) {
-    read(gpio_req.fd, &event, sizeof(event));
-    ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
-    gettimeofday(&data[i].time, NULL);
-    buf = (rx[1] << 16) | (rx[2] << 8) | rx[3];
-    data[i].adc = (double)buf * 5 / 0x7FFFFF;
+  for (int i = 0; i < 2; i++) {
+    for (int j = 0; j < NUM + 1; j++) {
+      read(gpio_req.fd, &event, sizeof(event));
+      ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
+      gettimeofday(&data[j].time, NULL);
+      buf = (rx[1] << 16) | (rx[2] << 8) | rx[3];
+      // data[j].adc = (double)buf * 5 / 0x7FFFFF;
+      data[j].adc = buf;
+    }
   }
-
   for (int i = 1; i < NUM + 1; i++) {
-    data[i].old_time = data[i - 1].time;
+    data[i].rate.tv_sec = data[i].time.tv_sec - data[i - 1].time.tv_sec;
+    data[i].rate.tv_usec = data[i].time.tv_usec - data[i - 1].time.tv_usec;
+  }
+  data[0] = data[1];
+  for (int i = 1; i < NUM + 1; i++) {
+    data[i].time.tv_sec = data[i].time.tv_sec - data[0].time.tv_sec;
+    data[i].time.tv_usec = data[i].time.tv_usec - data[0].time.tv_usec;
   }
 
-  std::printf("count,t,volt\n");
+  std::printf("count,t,rate,volt,adc\n");
   std::fflush(stdout);
   for (int i = 1; i < NUM + 1; i++) {
-    std::printf("%d,%ld,%lf\n",
+    std::printf("%d,%ld,%ld,%lf,%d\n",
                 i,
-                (data[i].time.tv_sec * 1000000 + data[i].time.tv_usec) - (data[i].old_time.tv_sec * 1000000 + data[i].old_time.tv_usec),
+                data[i].time.tv_sec * 1000000 + data[i].time.tv_usec,
+                data[i].rate.tv_sec * 1000000 + data[i].rate.tv_usec,
+                (double)data[i].adc * 5 / 0x7FFFFF,
                 data[i].adc);
   }
   return 0;

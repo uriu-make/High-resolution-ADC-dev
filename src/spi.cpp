@@ -8,17 +8,7 @@
 #include <time.h>
 #include <iostream>
 
-class spi {
- private:
-  int fd;
-  __u32 speed;
-
- public:
-  int openSPI(const char dev[]);
-  int spiMode(__u8 mode);
-  int spiSpeed(__u32 speed_hz);
-  int transfer(struct spi_ioc_transfer* t, int n);
-};
+#include "spi.h"
 
 int spi::openSPI(const char dev[]) {
   spi::fd = open(dev, O_RDWR | O_NONBLOCK);

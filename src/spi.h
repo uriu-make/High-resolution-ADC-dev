@@ -12,6 +12,7 @@
 
 class spi {
  private:
+ protected:
   int fd;
   __u32 speed;
 

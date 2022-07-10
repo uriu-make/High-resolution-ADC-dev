@@ -30,7 +30,7 @@
 #define DATARATE_5     0b00010011
 #define DATARATE_2_5   0b00000011
 
-class ADS1256 : spi {
+class ADS1256 : private spi {
  public:
   int setDRDYpin();
   int setDataRate(__u8 rate);

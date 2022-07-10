@@ -34,6 +34,8 @@ RUN apt-get update -q
 RUN apt-get install -y \
     crossbuild-essential-$ARCH
 
+RUN apt-get upgrade -y
+
 RUN mkdir -p /etc/sudoers.d/
 RUN echo "$USERNAME ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers.d/$USERNAME
 RUN chmod 440 /etc/sudoers.d/$USERNAME

@@ -10,3 +10,7 @@
 
 #include "spi.h"
 #include "ADS1256.h"
+
+// int ADS1256::AnalogRead(){
+// ADS1256::fd;
+// }
