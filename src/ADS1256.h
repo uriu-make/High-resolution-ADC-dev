@@ -31,13 +31,19 @@
 #define DATARATE_2_5   0b00000011
 
 class ADS1256 : private spi {
+ private:
+  __u8 RATE;
+  __u8 GAIN;
+  double VREF;
+  __u8 ADCPIN;
+
  public:
-  int setDRDYpin();
+  int setDRDYpin(int pin);
   int setDataRate(__u8 rate);
   int setPGA(int gain);
   int setVREF(double vref);
   int setAIN(__u8 positive, __u8 negative);
-  int AnalogRead();
+  double AnalogRead(void);
 };
 
 #endif
