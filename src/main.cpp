@@ -10,7 +10,7 @@
 #include <sys/time.h>
 
 #define ADS1256_CLOCK 7680000
-#define NUM           10000
+#define NUM           20000
 
 struct data {
   int adc;
@@ -121,8 +121,9 @@ int main() {
   reg[0] = reg[0] | 0b00000100;
   reg[1] = 0b01110110;
   reg[2] = 0b00000000;
+  // reg[2] = 0b00000000;
   // reg[3] = 0b10000100;
-  // reg[3] = 0b01110010;
+  // reg[3] = 0b10000010;
   reg[3] = 0b11110000;
 
   tx[0] = 0b01010000;
@@ -161,6 +162,7 @@ int main() {
   arg[1].bits_per_word = 8;
   arg[1].cs_change = 0;
 
+  // sleep(5);
   gpio_req.config.num_attrs = 2;  // gpioイベントの検出を開始
   ioctl(gpio_req.fd, GPIO_V2_LINE_SET_CONFIG_IOCTL, &gpio_req.config);
 
@@ -187,11 +189,11 @@ int main() {
   std::printf("count,t,rate,volt,adc\n");
   std::fflush(stdout);
   for (int i = 1; i < NUM + 1; i++) {
-    std::printf("%d,%ld,%ld,%lf,%d\n",
+    std::printf("%d,%ld,%ld,%.8lf,%d\n",
                 i,
                 data[i].time.tv_sec * 1000000 + data[i].time.tv_usec,
                 data[i].rate.tv_sec * 1000000 + data[i].rate.tv_usec,
-                (double)data[i].adc * 5 / 0x7FFFFF,
+                (double)data[i].adc * 5 / (1 * 0x7FFFFF),
                 data[i].adc);
   }
   return 0;
