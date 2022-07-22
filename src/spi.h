@@ -17,9 +17,9 @@ class spi {
   __u32 speed;
 
  public:
-  int openSPI(const char dev[]);
-  int spiMode(__u8 mode);
-  int spiSpeed(__u32 speed_hz);
-  int transfer(const struct spi_ioc_transfer* t, int n);
+  int openSPI(const char dev[]);                          // SPIバスを開く
+  int spiMode(__u8 mode);                                 // SPIモードを設定
+  int spiSpeed(__u32 speed_hz);                           // SCLKの最大値を設定(Hz)
+  int transfer(const struct spi_ioc_transfer* t, int n);  //データの送受信を行う
 };
 #endif
