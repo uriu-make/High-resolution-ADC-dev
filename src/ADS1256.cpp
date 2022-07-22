@@ -204,13 +204,7 @@ int ADS1256::selfCal(void) {
 
 // ADCの値を電圧で返す
 double ADS1256::AnalogRead(void) {
-  int buf;
-  buf = ADS1256::AnalogReadRow();
-  if ((buf & _BITULL(23)) > 0) {
-    return -1 * double(buf) * 2 * ADS1256::VREF / (ADS1256::GAIN * 0x7FFFFF);
-  } else {
-    return double(buf) * 2 * ADS1256::VREF / (ADS1256::GAIN * 0x7FFFFF);
-  }
+  return ADS1256::convertVolt(ADS1256::AnalogReadRow());
 }
 
 // ADCの値を生で返す
@@ -239,4 +233,13 @@ int ADS1256::AnalogReadRow(void) {
   arg[1].cs_change = 0;
   ADS1256::transfer(arg, 2);
   return (rx[0] & 0b01111111 << 16) | (rx[1] << 8) | rx[2];
+}
+
+//生データを電圧に変換
+double ADS1256::convertVolt(int raw) {
+  if ((raw & _BITULL(23)) > 0) {
+    return -1 * double(raw) * 2 * ADS1256::VREF / (ADS1256::GAIN * 0x7FFFFF);
+  } else {
+    return double(raw) * 2 * ADS1256::VREF / (ADS1256::GAIN * 0x7FFFFF);
+  }
 }

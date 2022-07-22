@@ -81,9 +81,10 @@ class ADS1256 : private spi {
   int digitalRead(__u8 pin);               // GPIO入力
   int digitalWrite(__u8 pin, __u8 value);  // GPIO出力
 
-  int selfCal(void);        //セルフキャリブレーション
-  double AnalogRead(void);  // ADCの値を電圧で返す
-  int AnalogReadRow(void);  // ADCの値を生で返す
+  int selfCal(void);            //セルフキャリブレーション
+  double AnalogRead(void);      // ADCの値を電圧で返す
+  int AnalogReadRow(void);      // ADCの値を生で返す
+  double convertVolt(int raw);  //生データを電圧に変換
 };
 
 #endif
