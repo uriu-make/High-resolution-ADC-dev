@@ -10,7 +10,7 @@
 #include <sys/time.h>
 
 #define ADS1256_CLOCK 7680000
-#define NUM           20000
+#define NUM           10000
 
 struct data {
   int adc;
@@ -78,14 +78,14 @@ int main() {
     exit(0);
   }
   //初期化
-  struct gpio_v2_line_values value;
-  value.bits = 0;
-  value.mask = _BITULL(0);
-  ioctl(gpio_req.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &value);
-  usleep(1);
-  value.bits = _BITULL(0);
-  value.mask = _BITULL(0);
-  ioctl(gpio_req.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &value);
+  // struct gpio_v2_line_values value;
+  // value.bits = 0;
+  // value.mask = _BITULL(0);
+  // ioctl(gpio_req.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &value);
+  // usleep(1);
+  // value.bits = _BITULL(0);
+  // value.mask = _BITULL(0);
+  // ioctl(gpio_req.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &value);
 
   //初期設定読み込み
   struct spi_ioc_transfer arg[2];
@@ -119,9 +119,10 @@ int main() {
   ioctl(spi_fd, SPI_IOC_MESSAGE(2), arg);
   //設定変更
   reg[0] = reg[0] | 0b00000100;
-  reg[1] = 0b01110110;
-  reg[2] = 0b00000000;
-  // reg[2] = 0b00000000;
+  reg[1] = 0b01100111;
+  // reg[1] = 0b00000001;
+  // reg[2] = 0b00000011;  // GPA
+  reg[2] = 0b00000110;
   // reg[3] = 0b10000100;
   // reg[3] = 0b10000010;
   reg[3] = 0b11110000;
@@ -146,6 +147,19 @@ int main() {
 
   ioctl(spi_fd, SPI_IOC_MESSAGE(2), &arg);
 
+  tx[0] = 0b11110000;
+  tx[1] = 0;
+  arg[0].tx_buf = (__u64)&tx[0];
+  arg[0].rx_buf = (__u64)NULL;
+  arg[0].len = 1;
+  arg[0].delay_usecs = 0;
+  arg[0].speed_hz = freq;
+  arg[0].bits_per_word = 8;
+  arg[0].cs_change = 0;
+  sleep(1);
+  ioctl(spi_fd, SPI_IOC_MESSAGE(1), &arg);
+  sleep(1);
+
   //測定
   tx[0] = 0b00000001;
 
@@ -162,7 +176,6 @@ int main() {
   arg[1].bits_per_word = 8;
   arg[1].cs_change = 0;
 
-  // sleep(5);
   gpio_req.config.num_attrs = 2;  // gpioイベントの検出を開始
   ioctl(gpio_req.fd, GPIO_V2_LINE_SET_CONFIG_IOCTL, &gpio_req.config);
 
@@ -193,8 +206,13 @@ int main() {
                 i,
                 data[i].time.tv_sec * 1000000 + data[i].time.tv_usec,
                 data[i].rate.tv_sec * 1000000 + data[i].rate.tv_usec,
-                (double)data[i].adc * 5 / (1 * 0x7FFFFF),
+                double(data[i].adc) * 5 / (pow(2, reg[2] & 0b00000111) * 0x7FFFFF),
                 data[i].adc);
   }
+  
+  close(gpio_req.fd);
+  close(gpio_fd);
+  close(spi_fd);
+
   return 0;
 }
