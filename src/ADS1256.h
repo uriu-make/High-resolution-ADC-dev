@@ -65,7 +65,7 @@ class ADS1256 : private spi {
 
  public:
   int ReadReg(__u8 reg, __u8* value);  //指定レジスタの読み取り
-  int WriteReg(__u8 reg, __u8 value);  //レジスタに書き込む関数
+  int WriteReg(__u8 reg, __u8 value);  //指定レジスタに書き込み
 
   int setClock(int clock);    // ADS1256に入力される水晶振動子の周波数から、その他の周波数を設定する
   void setVREF(double vref);  //リファレンス電圧の設定
