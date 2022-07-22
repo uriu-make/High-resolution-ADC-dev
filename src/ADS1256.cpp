@@ -11,6 +11,7 @@
 #include "spi.h"
 #include "ADS1256.h"
 
+//指定レジスタの読み取り
 int ADS1256::ReadReg(__u8 reg, __u8* value) {
   __u8 tx[2];
   struct spi_ioc_transfer arg[2];
@@ -38,6 +39,7 @@ int ADS1256::ReadReg(__u8 reg, __u8* value) {
   return ADS1256::transfer(arg, 2);
 }
 
+//指定レジスタに書き込み
 int ADS1256::WriteReg(__u8 reg, __u8 value) {
   __u8 tx[2];
   struct spi_ioc_transfer arg[2];
@@ -65,6 +67,7 @@ int ADS1256::WriteReg(__u8 reg, __u8 value) {
   return ADS1256::transfer(arg, 2);
 }
 
+// ADS1256に入力される水晶振動子の周波数から、その他の周波数を設定する
 int ADS1256::setClock(int clock) {
   ADS1256::CLOCK = clock;
   ADS1256::delay_sclk = std::ceil(50 * 1000000 / ADS1256::CLOCK);
@@ -72,10 +75,12 @@ int ADS1256::setClock(int clock) {
   return ADS1256::spiSpeed(ADS1256::CLOCK / 4);
 }
 
+//リファレンス電圧の設定
 void ADS1256::setVREF(double vref) {
   ADS1256::VREF = vref;
 }
 
+//アナログバッファの有効/無効
 int ADS1256::setAnalogBuffer(bool buf) {
   __u8 reg, value;
   reg = 0b00000000;
@@ -91,11 +96,13 @@ int ADS1256::setAnalogBuffer(bool buf) {
   return ADS1256::WriteReg(reg, value);
 }
 
+//サンプリングレートの設定
 int ADS1256::setSampleRate(__u8 rate) {
   __u8 reg = 0b00000111;
   return ADS1256::WriteReg(reg, rate);
 }
 
+//プログラマブルゲインアンプの設定
 int ADS1256::setPGA(__u8 gain) {
   __u8 reg, value;
   reg = 0b0000010;
@@ -112,6 +119,15 @@ int ADS1256::setPGA(__u8 gain) {
   return ADS1256::WriteReg(reg, value);
 }
 
+//アナログ入力のピンを設定
+int ADS1256::setAIN(__u8 positive, __u8 negative) {
+  __u8 reg, ain;
+  reg = 0b00000001;
+  ain = ((positive << 4) & 0b11110000) | (negative & 0b00001111);
+  return ADS1256::WriteReg(reg, ain);
+}
+
+//クロック出力を設定
 int ADS1256::setClockOUT(__u8 mode) {
   __u8 reg, value;
   reg = 0b0000010;
@@ -123,6 +139,7 @@ int ADS1256::setClockOUT(__u8 mode) {
   return ADS1256::WriteReg(reg, value);
 }
 
+//開放/短絡センサー検出の設定
 int ADS1256::setSDC(__u8 mode) {
   __u8 reg, value;
   reg = 0b0000010;
@@ -134,13 +151,7 @@ int ADS1256::setSDC(__u8 mode) {
   return ADS1256::WriteReg(reg, value);
 }
 
-int ADS1256::setAIN(__u8 positive, __u8 negative) {
-  __u8 reg, ain;
-  reg = 0b00000001;
-  ain = ((positive << 4) & 0b11110000) | (negative & 0b00001111);
-  return ADS1256::WriteReg(reg, ain);
-}
-
+// GPIOピンのモードを設定
 int ADS1256::pinMode(__u8 pin, __u8 mode) {
   __u8 reg, value;
   reg = 0b00000100;
@@ -152,6 +163,7 @@ int ADS1256::pinMode(__u8 pin, __u8 mode) {
   return ADS1256::WriteReg(reg, value);
 }
 
+// GPIO入力
 int ADS1256::digitalRead(__u8 pin) {
   __u8 reg, value;
   reg = 0b00000100;
@@ -162,6 +174,7 @@ int ADS1256::digitalRead(__u8 pin) {
   return 0b00000001 & (value >> pin);
 }
 
+// GPIO出力
 int ADS1256::digitalWrite(__u8 pin, __u8 value) {
   __u8 reg, buf;
   reg = 0b00000100;
@@ -173,6 +186,7 @@ int ADS1256::digitalWrite(__u8 pin, __u8 value) {
   return ADS1256::WriteReg(reg, buf);
 }
 
+//セルフキャリブレーション
 int ADS1256::selfCal(void) {
   __u8 tx = 0b11110000;
   struct spi_ioc_transfer reg;
@@ -188,6 +202,7 @@ int ADS1256::selfCal(void) {
   return ADS1256::transfer(&reg, 1);
 }
 
+// ADCの値を電圧で返す
 double ADS1256::AnalogRead(void) {
   int buf;
   buf = ADS1256::AnalogReadRow();
@@ -198,6 +213,7 @@ double ADS1256::AnalogRead(void) {
   }
 }
 
+// ADCの値を生で返す
 int ADS1256::AnalogReadRow(void) {
   struct spi_ioc_transfer arg[2];
   __u8 tx, rx[3];
