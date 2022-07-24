@@ -6,9 +6,10 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <time.h>
-#include <iostream>
+// #include <iostream>
 
 #include "spi.h"
+#include "gpio.h"
 
 #ifndef __ADS1256_H_
 #define __ADS1256_H_
@@ -56,7 +57,7 @@
 #define OUTPUT 0
 #define INPUT  1
 
-class ADS1256 : private spi {
+class ADS1256 : private SPI, private GPIO {
  private:
   int CLOCK;         // ADS1256に接続された水晶振動子の周波数
   __u8 GAIN = 1;     // PGAのゲイン
@@ -85,6 +86,7 @@ class ADS1256 : private spi {
   double AnalogRead(void);      // ADCの値を電圧で返す
   int AnalogReadRow(void);      // ADCの値を生で返す
   double convertVolt(int raw);  //生データを電圧に変換
+  int ADS1256_end();
 };
 
 #endif

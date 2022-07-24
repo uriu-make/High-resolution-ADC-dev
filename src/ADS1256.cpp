@@ -6,7 +6,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <time.h>
-#include <iostream>
+// #include <iostream>
 
 #include "spi.h"
 #include "ADS1256.h"
@@ -36,7 +36,7 @@ int ADS1256::ReadReg(__u8 reg, __u8* value) {
   arg[1].bits_per_word = 8;
   arg[1].cs_change = 0;
 
-  return ADS1256::transfer(arg, 2);
+  return ADS1256::spi_transfer(arg, 2);
 }
 
 //指定レジスタに書き込み
@@ -64,15 +64,15 @@ int ADS1256::WriteReg(__u8 reg, __u8 value) {
   arg[1].bits_per_word = 8;
   arg[1].cs_change = 0;
 
-  return ADS1256::transfer(arg, 2);
+  return ADS1256::spi_transfer(arg, 2);
 }
 
 // ADS1256に入力される水晶振動子の周波数から、その他の周波数を設定する
 int ADS1256::setClock(int clock) {
   ADS1256::CLOCK = clock;
-  ADS1256::delay_sclk = std::ceil(50 * 1000000 / ADS1256::CLOCK);
+  ADS1256::delay_sclk = 50 * 1000000 / ADS1256::CLOCK;
 
-  return ADS1256::spiSpeed(ADS1256::CLOCK / 4);
+  return ADS1256::spi_speed(ADS1256::CLOCK / 4);
 }
 
 //リファレンス電圧の設定
@@ -199,7 +199,7 @@ int ADS1256::selfCal(void) {
   reg.speed_hz = ADS1256::speed;
   reg.bits_per_word = 8;
   reg.cs_change = 0;
-  return ADS1256::transfer(&reg, 1);
+  return ADS1256::spi_transfer(&reg, 1);
 }
 
 // ADCの値を電圧で返す
@@ -231,7 +231,7 @@ int ADS1256::AnalogReadRow(void) {
   arg[1].speed_hz = ADS1256::speed;
   arg[1].bits_per_word = 8;
   arg[1].cs_change = 0;
-  ADS1256::transfer(arg, 2);
+  ADS1256::spi_transfer(arg, 2);
   return (rx[0] & 0b01111111 << 16) | (rx[1] << 8) | rx[2];
 }
 
