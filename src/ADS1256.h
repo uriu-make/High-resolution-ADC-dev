@@ -57,6 +57,9 @@
 #define OUTPUT 0
 #define INPUT  1
 
+#define HIGH 1
+#define LOW  0
+
 class ADS1256 : private SPI, private GPIO {
  private:
   int CLOCK;         // ADS1256に接続された水晶振動子の周波数
@@ -86,7 +89,7 @@ class ADS1256 : private SPI, private GPIO {
   double AnalogRead(void);      // ADCの値を電圧で返す
   int AnalogReadRow(void);      // ADCの値を生で返す
   double convertVolt(int raw);  //生データを電圧に変換
-  int ADS1256_end();
+  void ADS1256_close();
 };
 
 #endif

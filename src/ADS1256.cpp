@@ -14,8 +14,9 @@
 //指定レジスタの読み取り
 int ADS1256::ReadReg(__u8 reg, __u8* value) {
   __u8 tx[2];
-  struct spi_ioc_transfer arg[2];
-  memset(arg, 0, sizeof(arg));
+  struct spi_ioc_transfer arg[2] = {0};
+  // arg[0] = (struct spi_ioc_transfer){0};
+  // arg[1] = (struct spi_ioc_transfer){0};
 
   tx[0] = 0b00010000 | (reg & 0b00001111);
   tx[1] = 0;
@@ -42,8 +43,7 @@ int ADS1256::ReadReg(__u8 reg, __u8* value) {
 //指定レジスタに書き込み
 int ADS1256::WriteReg(__u8 reg, __u8 value) {
   __u8 tx[2];
-  struct spi_ioc_transfer arg[2];
-  memset(arg, 0, sizeof(arg));
+  struct spi_ioc_transfer arg[2] = {0};
 
   tx[0] = 0b01010000 | (reg & 0b00001111);
   tx[1] = 0;
@@ -189,17 +189,16 @@ int ADS1256::digitalWrite(__u8 pin, __u8 value) {
 //セルフキャリブレーション
 int ADS1256::selfCal(void) {
   __u8 tx = 0b11110000;
-  struct spi_ioc_transfer reg;
-  memset(&reg, 0, sizeof(reg));
+  struct spi_ioc_transfer arg = {0};
 
-  reg.tx_buf = (__u64)&tx;
-  reg.rx_buf = (__u64)NULL;
-  reg.len = 1;
-  reg.delay_usecs = 0;
-  reg.speed_hz = ADS1256::speed;
-  reg.bits_per_word = 8;
-  reg.cs_change = 0;
-  return ADS1256::spi_transfer(&reg, 1);
+  arg.tx_buf = (__u64)&tx;
+  arg.rx_buf = (__u64)NULL;
+  arg.len = 1;
+  arg.delay_usecs = 0;
+  arg.speed_hz = ADS1256::speed;
+  arg.bits_per_word = 8;
+  arg.cs_change = 0;
+  return ADS1256::spi_transfer(&arg, 1);
 }
 
 // ADCの値を電圧で返す
@@ -209,12 +208,9 @@ double ADS1256::AnalogRead(void) {
 
 // ADCの値を生で返す
 int ADS1256::AnalogReadRow(void) {
-  struct spi_ioc_transfer arg[2];
-  __u8 tx, rx[3];
-
-  memset(arg, 0, sizeof(arg));
-  tx = 0b00000001;
-  memset(rx, 0, sizeof(rx));
+  struct spi_ioc_transfer arg[2] = {0};
+  __u8 tx = 0b00000001;
+  __u8 rx[3] = {0};
 
   arg[0].tx_buf = (__u64)&tx;
   arg[0].rx_buf = (__u64)NULL;
@@ -242,4 +238,9 @@ double ADS1256::convertVolt(int raw) {
   } else {
     return double(raw) * 2 * ADS1256::VREF / (ADS1256::GAIN * 0x7FFFFF);
   }
+}
+
+void ADS1256::ADS1256_close() {
+ADS1256::spi_close();
+ADS1256::gpio_close();
 }

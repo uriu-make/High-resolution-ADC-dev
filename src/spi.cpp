@@ -34,3 +34,7 @@ int SPI::spi_speed(__u32 speed_hz) {
 int SPI::spi_transfer(const struct spi_ioc_transfer* arg, int n) {
   return ioctl(SPI::fd, SPI_IOC_MESSAGE(n), arg);
 }
+
+void SPI::spi_close(void) {
+  close(SPI::fd);
+}

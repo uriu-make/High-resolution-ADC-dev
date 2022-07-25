@@ -22,7 +22,7 @@ int main() {
   // int data = 0;
   __u8 tx[4] = {0, 0, 0, 0};
   __u8 rx[4] = {0, 0, 0, 0};
-  __u8 reg[11];
+  __u8 reg[11] = {0};
 
   __u8 mode = SPI_MODE_1;
   __u32 freq = 1900000;
@@ -42,8 +42,7 @@ int main() {
     exit(0);
   }
   // gpioピンの初期化
-  struct gpio_v2_line_request gpio_req;
-  memset(&gpio_req, 0, sizeof(gpio_req));
+  struct gpio_v2_line_request gpio_req = {0};
   gpio_req.num_lines = 2;
   gpio_req.offsets[0] = 18;
   gpio_req.offsets[1] = 17;  // 17番を使用
@@ -88,11 +87,8 @@ int main() {
   // ioctl(gpio_req.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &value);
 
   //初期設定読み込み
-  struct spi_ioc_transfer arg[2];
-  memset(&arg, 0, sizeof(arg));
-  memset(tx, 0, sizeof(tx));
-  memset(rx, 0, sizeof(rx));
-  memset(reg, 0, sizeof(reg));
+  struct spi_ioc_transfer arg[2] = {0};
+
   tx[0] = 0b00010000;
   tx[1] = 10;
   // tx[0] = 0b01010000 | 0x03;
@@ -209,7 +205,7 @@ int main() {
                 double(data[i].adc) * 5 / (pow(2, reg[2] & 0b00000111) * 0x7FFFFF),
                 data[i].adc);
   }
-  
+
   close(gpio_req.fd);
   close(gpio_fd);
   close(spi_fd);
