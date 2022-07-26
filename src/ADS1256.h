@@ -11,8 +11,7 @@
 #include "spi.h"
 #include "gpio.h"
 
-#ifndef __ADS1256_H_
-#define __ADS1256_H_
+#pragma once
 
 //サンプリングレート
 #define DATARATE_30000 0b11110000
@@ -91,5 +90,3 @@ class ADS1256 : private SPI, private GPIO {
   double convertVolt(int raw);  //生データを電圧に変換
   void ADS1256_close();
 };
-
-#endif

@@ -7,8 +7,7 @@
 #include <unistd.h>
 #include <time.h>
 // #include <iostream>
-#ifndef __SPI_H_
-#define __SPI_H_
+#pragma once
 
 class SPI {
  private:
@@ -23,4 +22,3 @@ class SPI {
   int spi_transfer(const struct spi_ioc_transfer* t, int n);  //データの送受信を行う
   void spi_close(void);
 };
-#endif
