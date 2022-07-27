@@ -6,7 +6,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <time.h>
-// #include <iostream>
+#include <iostream>
 
 #include "spi.h"
 #include "gpio.h"
@@ -61,14 +61,28 @@
 
 class ADS1256 : private SPI, private GPIO {
  private:
+  std::string spidev;
+  std::string gpiochip;
   int CLOCK;         // ADS1256に接続された水晶振動子の周波数
   __u8 GAIN = 1;     // PGAのゲイン
   double VREF;       //接続された基準電圧
   __u16 delay_sclk;  //連続した通信に挟む待ち時間
+  __u32 drdy_pin;
+  __u32 reset_pin;
+  __u32 pdwn_pin;
 
  public:
-  int ReadReg(__u8 reg, __u8* value);  //指定レジスタの読み取り
+  ADS1256(void);
+  ADS1256(const char spidev[], const char gpiodev[], __u32 DRDY, __u32 RESET, __u32 PDWN);
+  int open(const char spidev[], const char gpiodev[]);
+  int open(void);
+  int init(__u32 DRDY, __u32 RESET, __u32 PDWN);
+  int init(void);
+
+  int ReadReg(__u8 reg, __u8 *value);  //指定レジスタの読み取り
   int WriteReg(__u8 reg, __u8 value);  //指定レジスタに書き込み
+
+  void reset(void);
 
   int setClock(int clock);    // ADS1256に入力される水晶振動子の周波数から、その他の周波数を設定する
   void setVREF(double vref);  //リファレンス電圧の設定

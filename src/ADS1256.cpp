@@ -6,17 +6,59 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <time.h>
-// #include <iostream>
+#include <iostream>
 
 #include "spi.h"
 #include "ADS1256.h"
+
+ADS1256::ADS1256(void) {}
+
+ADS1256::ADS1256(const char spidev[], const char gpiodev[], __u32 DRDY, __u32 RESET, __u32 PDWN) {
+  this->spidev = std::string(spidev);
+  this->gpiochip = std::string(gpiochip);
+  this->drdy_pin = DRDY;
+  this->reset_pin = RESET;
+  this->pdwn_pin = PDWN;
+}
+
+int ADS1256::open(const char spidev[], const char gpiodev[]) {
+  if (ADS1256::spi_open(spidev) <= 0) {
+    std::cerr << std::string(spidev) + " is not open." << std::endl;
+    return -1;
+  }
+  if (ADS1256::gpio_open(gpiodev) <= 0) {
+    std::cerr << std::string(gpiochip) + " is not open." << std::endl;
+    return -1;
+  }
+  return 1;
+}
+
+int ADS1256::open(void) {
+  if (ADS1256::spi_open(spidev.c_str()) <= 0) {
+    std::cerr << spidev + " is not open." << std::endl;
+    return -1;
+  }
+  if (ADS1256::gpio_open(gpiochip.c_str()) <= 0) {
+    std::cerr << gpiochip + " is not open." << std::endl;
+    return -1;
+  }
+  return 1;
+}
+
+int ADS1256::init(void) {
+  ADS1256::gpio_set_default_flag(GPIO_V2_LINE_FLAG_OUTPUT);
+  ADS1256::gpio_set_attrs_output_values(0);
+  ADS1256::gpio_set_attrs_flag(1, GPIO_V2_LINE_FLAG_INPUT | GPIO_V2_LINE_FLAG_EDGE_FALLING);
+  ADS1256::gpio_attrs_add_pin(reset_pin, 0, HIGH);
+  ADS1256::gpio_attrs_add_pin(pdwn_pin, 0, HIGH);
+  ADS1256::gpio_attrs_add_pin(drdy_pin, 1);
+  ADS1256::gpio_init(1);
+}
 
 //指定レジスタの読み取り
 int ADS1256::ReadReg(__u8 reg, __u8* value) {
   __u8 tx[2];
   struct spi_ioc_transfer arg[2] = {0};
-  // arg[0] = (struct spi_ioc_transfer){0};
-  // arg[1] = (struct spi_ioc_transfer){0};
 
   tx[0] = 0b00010000 | (reg & 0b00001111);
   tx[1] = 0;
@@ -24,8 +66,8 @@ int ADS1256::ReadReg(__u8 reg, __u8* value) {
   arg[0].tx_buf = (__u64)&tx;
   arg[0].rx_buf = (__u64)NULL;
   arg[0].len = 2;
-  arg[0].delay_usecs = ADS1256::delay_sclk;
-  arg[0].speed_hz = ADS1256::speed;
+  arg[0].delay_usecs = delay_sclk;
+  arg[0].speed_hz = speed;
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
 
@@ -33,7 +75,7 @@ int ADS1256::ReadReg(__u8 reg, __u8* value) {
   arg[1].rx_buf = (__u64)NULL;
   arg[1].len = 1;
   arg[1].delay_usecs = 0;
-  arg[1].speed_hz = ADS1256::speed;
+  arg[1].speed_hz = speed;
   arg[1].bits_per_word = 8;
   arg[1].cs_change = 0;
 
@@ -51,8 +93,8 @@ int ADS1256::WriteReg(__u8 reg, __u8 value) {
   arg[0].tx_buf = (__u64)&tx;
   arg[0].rx_buf = (__u64)NULL;
   arg[0].len = 2;
-  arg[0].delay_usecs = ADS1256::delay_sclk;
-  arg[0].speed_hz = ADS1256::speed;
+  arg[0].delay_usecs = delay_sclk;
+  arg[0].speed_hz = speed;
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
 
@@ -60,24 +102,30 @@ int ADS1256::WriteReg(__u8 reg, __u8 value) {
   arg[1].rx_buf = (__u64)NULL;
   arg[1].len = 1;
   arg[1].delay_usecs = 0;
-  arg[1].speed_hz = ADS1256::speed;
+  arg[1].speed_hz = speed;
   arg[1].bits_per_word = 8;
   arg[1].cs_change = 0;
 
   return ADS1256::spi_transfer(arg, 2);
 }
 
+void ADS1256::reset(void) {
+  ADS1256::gpio_write(reset_pin, LOW);
+  usleep(5 * 1000000 / CLOCK);
+  ADS1256::gpio_write(reset_pin, HIGH);
+}
+
 // ADS1256に入力される水晶振動子の周波数から、その他の周波数を設定する
 int ADS1256::setClock(int clock) {
-  ADS1256::CLOCK = clock;
-  ADS1256::delay_sclk = 50 * 1000000 / ADS1256::CLOCK;
+  CLOCK = clock;
+  delay_sclk = 50 * 1000000 / CLOCK;
 
   return ADS1256::spi_speed(ADS1256::CLOCK / 4);
 }
 
 //リファレンス電圧の設定
 void ADS1256::setVREF(double vref) {
-  ADS1256::VREF = vref;
+  VREF = vref;
 }
 
 //アナログバッファの有効/無効
@@ -115,7 +163,7 @@ int ADS1256::setPGA(__u8 gain) {
   if (gain > GAIN_64) {
     gain = GAIN_64;
   }
-  ADS1256::GAIN = pow(2, gain);
+  GAIN = pow(2, gain);
   return ADS1256::WriteReg(reg, value);
 }
 
@@ -195,7 +243,7 @@ int ADS1256::selfCal(void) {
   arg.rx_buf = (__u64)NULL;
   arg.len = 1;
   arg.delay_usecs = 0;
-  arg.speed_hz = ADS1256::speed;
+  arg.speed_hz = speed;
   arg.bits_per_word = 8;
   arg.cs_change = 0;
   return ADS1256::spi_transfer(&arg, 1);
@@ -209,14 +257,15 @@ double ADS1256::AnalogRead(void) {
 // ADCの値を生で返す
 int ADS1256::AnalogReadRow(void) {
   struct spi_ioc_transfer arg[2] = {0};
+  struct gpio_v2_line_event event;
   __u8 tx = 0b00000001;
   __u8 rx[3] = {0};
 
   arg[0].tx_buf = (__u64)&tx;
   arg[0].rx_buf = (__u64)NULL;
   arg[0].len = 1;
-  arg[0].delay_usecs = ADS1256::delay_sclk;
-  arg[0].speed_hz = ADS1256::speed;
+  arg[0].delay_usecs = delay_sclk;
+  arg[0].speed_hz = speed;
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
 
@@ -224,23 +273,24 @@ int ADS1256::AnalogReadRow(void) {
   arg[1].rx_buf = (__u64)&rx;
   arg[1].len = 3;
   arg[1].delay_usecs = 0;
-  arg[1].speed_hz = ADS1256::speed;
+  arg[1].speed_hz = speed;
   arg[1].bits_per_word = 8;
   arg[1].cs_change = 0;
+  ADS1256::gpio_get_event(&event);
   ADS1256::spi_transfer(arg, 2);
-  return (rx[0] & 0b01111111 << 16) | (rx[1] << 8) | rx[2];
+  return (rx[0] << 16) | (rx[1] << 8) | rx[2];
 }
 
 //生データを電圧に変換
 double ADS1256::convertVolt(int raw) {
   if ((raw & _BITULL(23)) > 0) {
-    return -1 * double(raw) * 2 * ADS1256::VREF / (ADS1256::GAIN * 0x7FFFFF);
+    return -1 * double(raw) * 2 * VREF / (GAIN * 0x7FFFFF);
   } else {
-    return double(raw) * 2 * ADS1256::VREF / (ADS1256::GAIN * 0x7FFFFF);
+    return double(raw) * 2 * VREF / (GAIN * 0x7FFFFF);
   }
 }
 
 void ADS1256::ADS1256_close() {
-ADS1256::spi_close();
-ADS1256::gpio_close();
+  ADS1256::spi_close();
+  ADS1256::gpio_close();
 }
