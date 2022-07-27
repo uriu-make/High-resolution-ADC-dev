@@ -52,7 +52,12 @@ int ADS1256::init(void) {
   ADS1256::gpio_attrs_add_pin(reset_pin, 0, HIGH);
   ADS1256::gpio_attrs_add_pin(pdwn_pin, 0, HIGH);
   ADS1256::gpio_attrs_add_pin(drdy_pin, 1);
-  ADS1256::gpio_init(1);
+
+  if (ADS1256::gpio_init(1) >= 0) {
+    return ADS1256::spi_mode(SPI_MODE_1);
+  } else {
+    return -1;
+  }
 }
 
 //指定レジスタの読み取り
@@ -232,6 +237,14 @@ int ADS1256::digitalWrite(__u8 pin, __u8 value) {
   }
   buf = ((buf & (~_BITULL(pin))) & 0b11111111) | ((value & 0b00001111) << pin);
   return ADS1256::WriteReg(reg, buf);
+}
+
+int ADS1256::enavle_event() {
+  return ADS1256::gpio_reconfig(2);
+}
+
+int ADS1256::disable_event() {
+  return ADS1256::gpio_reconfig(1);
 }
 
 //セルフキャリブレーション

@@ -59,6 +59,16 @@
 #define HIGH 1
 #define LOW  0
 
+#define AIN0 0b0000
+#define AIN1 0b0001
+#define AIN2 0b0010
+#define AIN3 0b0011
+#define AIN4 0b0100
+#define AIN5 0b0101
+#define AIN6 0b0110
+#define AIN7 0b0111
+#define AGND 0b1000
+
 class ADS1256 : private SPI, private GPIO {
  private:
   std::string spidev;
@@ -84,9 +94,8 @@ class ADS1256 : private SPI, private GPIO {
 
   void reset(void);
 
-  int setClock(int clock);    // ADS1256に入力される水晶振動子の周波数から、その他の周波数を設定する
-  void setVREF(double vref);  //リファレンス電圧の設定
-  int setDRDYpin(int pin);
+  int setClock(int clock);                   // ADS1256に入力される水晶振動子の周波数から、その他の周波数を設定する
+  void setVREF(double vref);                 //リファレンス電圧の設定
   int setAnalogBuffer(bool buf);             //アナログバッファの有効/無効
   int setSampleRate(__u8 rate);              //サンプリングレートの設定
   int setPGA(__u8 gain);                     //プログラマブルゲインアンプの設定
@@ -98,6 +107,8 @@ class ADS1256 : private SPI, private GPIO {
   int digitalRead(__u8 pin);               // GPIO入力
   int digitalWrite(__u8 pin, __u8 value);  // GPIO出力
 
+  int enavle_event();
+  int disable_event();
   int selfCal(void);            //セルフキャリブレーション
   double AnalogRead(void);      // ADCの値を電圧で返す
   int AnalogReadRow(void);      // ADCの値を生で返す
