@@ -31,7 +31,11 @@ class GPIO {
 
   void gpio_attrs_add_pins(__u32 pin[], __u32 num, __u32 attrs_num);
   void gpio_attrs_add_pins(__u32 pin[], __u32 num, __u32 attrs_num, __u64 values);
+
   int gpio_init(__u32 enable_attrs_num);
+  void gpio_set_attrs_set_mask(__u32 attrs_num, __u64 mask);
+
+  int gpio_reconfig(__u32 enable_attrs_num);
   __u64 gpio_get_attrs_mask(__u32 attrs_num);
 
   int gpio_write(__u32 pin, __u64 value);

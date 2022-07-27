@@ -57,7 +57,7 @@ void GPIO::gpio_attrs_add_pin(__u32 pin, __u32 attrs_num, __u64 values) {
 }
 
 void GPIO::gpio_attrs_add_pins(__u32 pin[], __u32 num, __u32 attrs_num) {
-  for (int i = 0; i < num; i++) {
+  for (__u32 i = 0; i < num; i++) {
     if (attrs_num < GPIO_V2_LINE_NUM_ATTRS_MAX && req.num_lines < GPIO_V2_LINES_MAX) {
       req.config.attrs[attrs_num].mask = req.config.attrs[attrs_num].mask | _BITULL(req.num_lines);
       bitmap[pin[i]] = _BITULL(req.num_lines);
@@ -68,7 +68,7 @@ void GPIO::gpio_attrs_add_pins(__u32 pin[], __u32 num, __u32 attrs_num) {
 }
 
 void GPIO::gpio_attrs_add_pins(__u32 pin[], __u32 num, __u32 attrs_num, __u64 values) {
-  for (int i = 0; i < num; i++) {
+  for (__u32 i = 0; i < num; i++) {
     if (attrs_num < GPIO_V2_LINE_NUM_ATTRS_MAX && req.num_lines < GPIO_V2_LINES_MAX) {
       req.config.attrs[attrs_num].mask = req.config.attrs[attrs_num].mask | _BITULL(req.num_lines);
       bitmap[pin[i]] = _BITULL(req.num_lines);
@@ -82,6 +82,15 @@ void GPIO::gpio_attrs_add_pins(__u32 pin[], __u32 num, __u32 attrs_num, __u64 va
 int GPIO::gpio_init(__u32 enable_attrs_num) {
   req.config.num_attrs = enable_attrs_num;
   return ioctl(fd, GPIO_V2_GET_LINE_IOCTL, &req);
+}
+
+void GPIO::gpio_set_attrs_set_mask(__u32 attrs_num, __u64 mask) {
+  req.config.attrs[attrs_num].mask = mask;
+}
+
+int GPIO::gpio_reconfig(__u32 enable_attrs_num) {
+  req.config.num_attrs = enable_attrs_num;
+  return ioctl(req.fd, GPIO_V2_LINE_SET_CONFIG_IOCTL, &req.config);
 }
 
 __u64 GPIO::gpio_get_attrs_mask(__u32 attrs_num) {
