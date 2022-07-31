@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <iostream>
+#include <poll.h>
 
 #include "spi.h"
 #include "gpio.h"
@@ -83,7 +84,7 @@ class ADS1256 : private SPI, private GPIO {
 
  public:
   ADS1256(void);
-  ADS1256(const char spidev[], const char gpiodev[], __u32 DRDY, __u32 RESET, __u32 PDWN);
+  ADS1256(const char spidev[], const char gpiodev[], __u32 DRDY, __u32 RESET, __u32 PDWN, int clock);
   int open(const char spidev[], const char gpiodev[]);
   int open(void);
   int init(__u32 DRDY, __u32 RESET, __u32 PDWN);
@@ -94,7 +95,9 @@ class ADS1256 : private SPI, private GPIO {
 
   void reset(void);
 
-  int setClock(int clock);                   // ADS1256に入力される水晶振動子の周波数から、その他の周波数を設定する
+  int setClock(int clock);  // ADS1256に入力される水晶振動子の周波数から、その他の周波数を設定する
+  int setClock(void);       // ADS1256に入力される水晶振動子の周波数から、その他の周波数を設定する
+
   void setVREF(double vref);                 //リファレンス電圧の設定
   int setAnalogBuffer(bool buf);             //アナログバッファの有効/無効
   int setSampleRate(__u8 rate);              //サンプリングレートの設定
@@ -107,11 +110,17 @@ class ADS1256 : private SPI, private GPIO {
   int digitalRead(__u8 pin);               // GPIO入力
   int digitalWrite(__u8 pin, __u8 value);  // GPIO出力
 
-  int enavle_event();
-  int disable_event();
-  int selfCal(void);            //セルフキャリブレーション
-  double AnalogRead(void);      // ADCの値を電圧で返す
-  int AnalogReadRow(void);      // ADCの値を生で返す
+  int enable_event();       //イベント検出を有効化
+  int disable_event();      //イベント検出を無効化
+  int selfCal(void);        //セルフキャリブレーション
+  double AnalogRead(void);  // ADCの値を電圧で返す
+  int AnalogReadRaw(void);  // ADCの値を生で返す
+
+  double AnalogReadSync(void);  // ADCの値を電圧で返す
+  int AnalogReadRawSync(void);  // ADCの値を生で返す
   double convertVolt(int raw);  //生データを電圧に変換
-  void ADS1256_close();
+  void ADS1256_close(void);
+
+  void gpio_reset(void);
+  void drdy_ready(void);
 };
