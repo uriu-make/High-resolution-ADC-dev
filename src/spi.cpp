@@ -11,7 +11,7 @@
 #include "spi.h"
 
 int SPI::spi_open(const char dev[]) {
-  SPI::fd = open(dev, O_RDWR | O_NONBLOCK);
+  SPI::fd = open(dev, O_RDWR | O_NONBLOCK | O_CLOEXEC);
   return SPI::fd;
 }
 int SPI::spi_mode(__u8 mode) {

@@ -8,8 +8,8 @@
 #include "gpio.h"
 
 int GPIO::gpio_open(const char dev[]) {
-  fd = open("/dev/gpiochip0", O_RDWR | O_NONBLOCK);
-  return fd;
+  gpio_fd = open("/dev/gpiochip0", O_RDWR | O_CLOEXEC);
+  return gpio_fd;
 }
 
 void GPIO::gpio_set_default_flag(__u64 flag) {
@@ -81,7 +81,7 @@ void GPIO::gpio_attrs_add_pins(__u32 pin[], __u32 num, __u32 attrs_num, __u64 va
 
 int GPIO::gpio_init(__u32 enable_attrs_num) {
   req.config.num_attrs = enable_attrs_num;
-  return ioctl(fd, GPIO_V2_GET_LINE_IOCTL, &req);
+  return ioctl(gpio_fd, GPIO_V2_GET_LINE_IOCTL, &req);
 }
 
 void GPIO::gpio_set_attrs_set_mask(__u32 attrs_num, __u64 mask) {
@@ -130,5 +130,5 @@ int GPIO::gpio_get_event(struct gpio_v2_line_event* event) {
 }
 
 void GPIO::gpio_close(void) {
-  close(fd);
+  close(gpio_fd);
 }

@@ -12,7 +12,7 @@
 class GPIO {
  private:
  protected:
-  int fd;
+  int gpio_fd;
   struct gpio_v2_line_request req = {0};
   struct gpio_v2_line_values values = {0};
   __u64 bitmap[GPIO_V2_LINES_MAX] = {0};
