@@ -15,12 +15,12 @@
 
 ADS1256::ADS1256(void) {}
 
-ADS1256::ADS1256(const char spidev[], const char gpiodev[], __u32 DRDY, __u32 RESET, __u32 PDWN, int clock) {
+ADS1256::ADS1256(const char spidev[], const char gpiodev[], __u32 DRDY, __u32 RESET, __u32 SYNC, int clock) {
   this->spidev = std::string(spidev);
   this->gpiochip = std::string(gpiochip);
   this->drdy_pin = DRDY;
   this->reset_pin = RESET;
-  this->pdwn_pin = PDWN;
+  this->sync_pin = SYNC;
   this->CLOCK = clock;
 }
 
@@ -53,7 +53,7 @@ int ADS1256::init(void) {
   ADS1256::gpio_set_attrs_output_values(0);
   ADS1256::gpio_set_attrs_flag(1, GPIO_V2_LINE_FLAG_INPUT | GPIO_V2_LINE_FLAG_EDGE_FALLING);
   ADS1256::gpio_attrs_add_pin(reset_pin, 0, HIGH);
-  ADS1256::gpio_attrs_add_pin(pdwn_pin, 0, HIGH);
+  ADS1256::gpio_attrs_add_pin(sync_pin, 0, HIGH);
   ADS1256::gpio_attrs_add_pin(drdy_pin, 1);
 
   if (ADS1256::gpio_init(1) < 0) {
@@ -337,9 +337,9 @@ int ADS1256::AnalogReadRawSync(void) {
   arg[1].bits_per_word = 8;
   arg[1].cs_change = 0;
 
-  ADS1256::gpio_write(pdwn_pin, LOW);
+  ADS1256::gpio_write(sync_pin, LOW);
   usleep(4 * 1000000 / CLOCK);
-  ADS1256::gpio_write(pdwn_pin, HIGH);
+  ADS1256::gpio_write(sync_pin, HIGH);
   ADS1256::gpio_reset();
   ADS1256::enable_event();
   ADS1256::gpio_get_event(&event);

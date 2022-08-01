@@ -80,14 +80,14 @@ class ADS1256 : private SPI, private GPIO {
   __u16 delay_sclk;  //連続した通信に挟む待ち時間
   __u32 drdy_pin;
   __u32 reset_pin;
-  __u32 pdwn_pin;
+  __u32 sync_pin;
 
  public:
   ADS1256(void);
-  ADS1256(const char spidev[], const char gpiodev[], __u32 DRDY, __u32 RESET, __u32 PDWN, int clock);
+  ADS1256(const char spidev[], const char gpiodev[], __u32 DRDY, __u32 RESET, __u32 SYNC, int clock);
   int open(const char spidev[], const char gpiodev[]);
   int open(void);
-  int init(__u32 DRDY, __u32 RESET, __u32 PDWN);
+  int init(__u32 DRDY, __u32 RESET, __u32 SYNC);
   int init(void);
 
   int ReadReg(__u8 reg, __u8 *value);  //指定レジスタの読み取り
