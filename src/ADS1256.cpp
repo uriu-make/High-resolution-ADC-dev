@@ -84,8 +84,8 @@ int ADS1256::ReadReg(__u8 reg, __u8* value) {
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
 
-  arg[1].tx_buf = (__u64)value;
-  arg[1].rx_buf = (__u64)NULL;
+  arg[1].tx_buf = (__u64)NULL;
+  arg[1].rx_buf = (__u64)value;
   arg[1].len = 1;
   arg[1].delay_usecs = 0;
   arg[1].speed_hz = speed;
@@ -224,7 +224,11 @@ int ADS1256::pinMode(__u8 pin, __u8 mode) {
   if (ADS1256::ReadReg(reg, &value) <= 0) {
     return -1;
   }
-  value = (value & (~_BITULL(pin + 4))) | ((mode << _BITULL(pin + 4)) | _BITULL(pin + 4));
+  if (mode == OUTPUT) {
+    value = value & ~(1 << (pin + 4));
+  } else {
+    value = value | (1 << (pin + 4));
+  }
   return ADS1256::WriteReg(reg, value);
 }
 
@@ -247,7 +251,12 @@ int ADS1256::digitalWrite(__u8 pin, __u8 value) {
   if (ADS1256::ReadReg(reg, &buf) <= 0) {
     return -1;
   }
-  buf = ((buf & (~_BITULL(pin))) & 0b11111111) | ((value & 0b00001111) << pin);
+
+  if (value == HIGH) {
+    buf = buf | (1 << (pin));
+  } else {
+    buf = buf & ~(1 << (pin));
+  }
   return ADS1256::WriteReg(reg, buf);
 }
 
