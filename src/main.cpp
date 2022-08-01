@@ -17,31 +17,26 @@ int main() {
   ads1256.setVREF(2.5);  //基準電圧を2.5Vに設定
   ads1256.reset();       // ADS1256をリセット
   usleep(50000);
-  ads1256.setClockOUT(CLOCK_OFF);         //外部クロック出力は使用しない
+  ads1256.setClockOUT(CLOCK_DIV_4);       //外部クロック出力は使用しない
   ads1256.setSampleRate(DATARATE_30000);  //サンプルレートを30kSPSに設定
   ads1256.setAIN(AIN6, AIN7);             //正をAIN6、負をAIN7に設定する
   ads1256.setPGA(GAIN_64);                // PGAのゲインを設定
-  ads1256.selfCal();                      // ADCの自動校正
+  ads1256.pinMode(3, OUTPUT);
+  ads1256.digitalWrite(3, HIGH);
+  usleep(100);
+  ads1256.digitalWrite(3, LOW);
+  usleep(100);
+  ads1256.digitalWrite(3, HIGH);
+
+  ads1256.selfCal();  // ADCの自動校正
 
   ads1256.drdy_ready();    //校正の終了を待つ
   ads1256.enable_event();  // drdyのイベント検出を有効化
   for (int i = 0; i < SAMPLENUM; i++) {
     data[i] = ads1256.AnalogReadSync();  //同期をとり、セトリング・タイムを制御して測定
-    // data[i] = ads1256.AnalogRead();      //同期を取らずにデートを取る
+    // data[i] = ads1256.AnalogRead();      //同期を取らずにデータを取る
   }
-  // ads1256.disable_event();
-  // ads1256.gpio_reset();
 
-  // ads1256.setClockOUT(CLOCK_OFF);
-  // ads1256.setSampleRate(DATARATE_30000);
-  // ads1256.setAIN(AIN7, AIN6);
-  // ads1256.setPGA(GAIN_64);
-  // ads1256.selfCal();
-  // ads1256.drdy_ready();
-  // ads1256.enable_event();
-  // for (int i = 0; i < NUM; i++) {
-  //   std::cout << ads1256.AnalogReadSync() << std::endl;
-  // }
   for (int i = 0; i < SAMPLENUM; i++) {
     std::cout << data[i] << std::endl;
   }
