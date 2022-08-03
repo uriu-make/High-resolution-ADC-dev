@@ -17,16 +17,10 @@ int main() {
   ads1256.setVREF(2.5);  //基準電圧を2.5Vに設定
   ads1256.reset();       // ADS1256をリセット
   usleep(50000);
-  ads1256.setClockOUT(CLOCK_DIV_4);       //外部クロック出力は使用しない
+  ads1256.setClockOUT(CLOCK_OFF);       //外部クロック出力は使用しない
   ads1256.setSampleRate(DATARATE_30000);  //サンプルレートを30kSPSに設定
   ads1256.setAIN(AIN6, AIN7);             //正をAIN6、負をAIN7に設定する
   ads1256.setPGA(GAIN_64);                // PGAのゲインを設定
-  ads1256.pinMode(3, OUTPUT);
-  ads1256.digitalWrite(3, HIGH);
-  usleep(100);
-  ads1256.digitalWrite(3, LOW);
-  usleep(100);
-  ads1256.digitalWrite(3, HIGH);
 
   ads1256.selfCal();  // ADCの自動校正
 
