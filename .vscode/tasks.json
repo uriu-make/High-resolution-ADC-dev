@@ -11,7 +11,8 @@
                 "${workspaceFolder}/src/*.c*",
                 "-o",
                 "${workspaceFolder}/${workspaceFolderBasename}.elf",
-                "-Wall"
+                "-Wall",
+                "-std=c++17"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
