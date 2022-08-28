@@ -12,7 +12,8 @@
                 "-o",
                 "${workspaceFolder}/${workspaceFolderBasename}.elf",
                 "-Wall",
-                "-std=c++17"
+                "-std=c++17",
+                "-pthread"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
