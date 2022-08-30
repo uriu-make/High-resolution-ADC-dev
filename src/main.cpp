@@ -1,7 +1,6 @@
 #include <iostream>
 #include <sys/time.h>
 #include "ADS1256.h"
-#include "function.h"
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -32,17 +31,35 @@ struct send_data {
 
 ADS1256 ads1256("/dev/spidev0.0", "/dev/gpiochip0", DRDY, RESET, SYNC, ADS1256_CLOCK);
 
-std::queue<struct ADC> q;
-std::mutex m;
+class DATA {
+ private:
+  std::queue<struct ADC> q;
+  std::mutex m;
 
-void getADC();
-void sendData();
+ public:
+  void getADC();
+  void sendData(int sock);
+};
+
+DATA data;
 
 int main() {
-  // 1.
+  pid_t pid;
+  cpu_set_t cpu_set;
+  int result;
+
+  pid = getpid();
+  CPU_ZERO(&cpu_set);
+  CPU_SET(1, &cpu_set);
+
+  result = sched_setaffinity(pid, sizeof(cpu_set_t), &cpu_set);
+  if (result != 0) {
+    std::cerr << "ERROR" << std::endl;
+    exit(0);
+  }
+
   // int sock_listen = socket(AF_INET, SOCK_STREAM, 0);
 
-  // 2.
   // struct sockaddr_in server_addr = {0};
   // server_addr.sin_family = AF_INET;
   // server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -51,6 +68,9 @@ int main() {
   // listen(sock_listen, 5);
   // struct sockaddr_in client_addr;
   // socklen_t len = sizeof(struct sockaddr_in);
+
+  // int sock = accept(sock_listen, (struct sockaddr*)&client_addr, &len);
+  // printf("accepted.\n");
 
   //初期化
 
@@ -69,33 +89,27 @@ int main() {
   ads1256.drdy_ready();    //校正の終了を待つ
   ads1256.enable_event();  // drdyのイベント検出を有効化
 
-  // struct ADC buf;
-  // for (int i = 0; i < 2; i++) {
-  //   for (int j = 0; j < SAMPLENUM + 1; j++) {
-  //     // data[j].raw= ads1256.AnalogReadRawSync();  //同期をとり、セトリング・タイムを制御して測定
-  //     buf.volt = ads1256.AnalogRead();  //同期を取らずにデータを取る
-  //     gettimeofday(&buf.time, NULL);
-  //     q.push(ADC{buf.volt, buf.time});
-  //   }
-  // }
+  int sock_listen = socket(AF_INET, SOCK_STREAM, 0);
+
+  struct sockaddr_in server_addr = {0};
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  server_addr.sin_port = htons(60000);
+  bind(sock_listen, (struct sockaddr*)&server_addr, sizeof(server_addr));
+  listen(sock_listen, 5);
+  struct sockaddr_in client_addr;
+  socklen_t len = sizeof(struct sockaddr_in);
+
+  int sock = accept(sock_listen, (struct sockaddr*)&client_addr, &len);
+  printf("accepted.\n");
 
   std::printf("t,volt\n");
   std::fflush(stdout);
-  std::thread th0{getADC};
-  std::thread th1{sendData};
+  std::thread th0{&DATA::getADC, &data};
+  std::thread th1{&DATA::sendData, &data, sock};
 
   th0.join();
   th1.join();
-
-  // int sock = accept(sock_listen, (struct sockaddr*)&client_addr, &len);
-  // printf("accepted.\n");
-
-  // struct send_data buf;
-  // for (int i = 1; i < SAMPLENUM + 1; i++) {
-  //   buf.volt = data[i].adc;
-  //   buf.t = data[i].time.tv_sec * 1000000 + data[i].time.tv_usec;
-  //   write(sock, &buf, sizeof(buf));
-  // }
 
   ads1256.ADS1256_close();
   // close(sock);
@@ -103,7 +117,7 @@ int main() {
   return 0;
 }
 
-void getADC() {
+void DATA::getADC() {
   struct ADC buf;
   cpu_set_t cpu_set;
   int result;
@@ -115,7 +129,8 @@ void getADC() {
     exit(0);
   }
 
-  while (true) {                      // data[j].raw= ads1256.AnalogReadRawSync();  //同期をとり、セトリング・タイムを制御して測定
+  while (true) {
+    // data[j].raw= ads1256.AnalogReadRawSync();  //同期をとり、セトリング・タイムを制御して測定
     buf.volt = ads1256.AnalogRead();  //同期を取らずにデータを取る
     gettimeofday(&buf.time, NULL);
     m.lock();
@@ -124,19 +139,38 @@ void getADC() {
   }
 }
 
-void sendData() {
-  struct ADC buf;
-  struct send_data data;
+void DATA::sendData(int sock) {
+  cpu_set_t cpu_set;
+  int result;
+  CPU_ZERO(&cpu_set);
+  CPU_SET(2, &cpu_set);
+  result = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpu_set);
+  if (result != 0) {
+    std::cerr << "ERROR" << std::endl;
+    exit(0);
+  }
+
   while (true) {
+    usleep(1000);
     m.lock();
-    for (int i = q.size(); i > 0; i--) {
-      buf = q.front();
-      q.pop();
-      data.volt = buf.volt;
-      data.t = buf.time.tv_sec * 1000000 + buf.time.tv_usec;
-      std::printf("%lld,%lf\n", data.t, data.volt);
+    int size = q.size();
+    if (size > 0) {
+      struct ADC buf;
+      struct send_data data[size];
+      // m.lock();
+      for (int i = 0; i < size; i++) {
+        buf = q.front();
+        q.pop();
+        data[i].volt = buf.volt;
+        data[i].t = buf.time.tv_sec * 1000000 + buf.time.tv_usec;
+      }
+      m.unlock();
+      write(sock, &data, sizeof(data));
+      // for (int i = 0; i < size; i++) {
+      //   std::printf("%lld,%lf\n", data[i].t, data[i].volt);
+      // }
+    } else {
+      m.unlock();
     }
-    m.unlock();
-    fflush(stdout);
   }
 }
