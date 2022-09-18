@@ -35,10 +35,24 @@ class DATA {
  private:
   std::mutex m;
   struct buffer buf = {-1, 0};
+  struct COMMAND {
+    __u8 rate;
+    __u8 gain;
+    __u8 positive;
+    __u8 negative;
+    bool buf;
+    bool sync;
+    __u8 mode;
+    bool run;
+    bool kill = false;
+  };
+  struct COMMAND com;
+  bool run_measure = false;
 
  public:
   void getADC();
-  void sendData(int sock);
+  void write_socket(int sock);
+  void read_socket(int sock);
 };
 
 DATA data;
@@ -101,12 +115,12 @@ int main() {
 
   // std::printf("t,volt\n");
   std::fflush(stdout);
-  std::thread th0{&DATA::getADC, &data};
-  std::thread th1{&DATA::sendData, &data, sock};
-
-  th0.join();
-  th1.join();
-
+  std::thread adc{&DATA::getADC, &data};
+  std::thread socket_write{&DATA::write_socket, &data, sock};
+  std::thread socket_read(&DATA::read_socket, &data, sock);
+  adc.join();
+  socket_write.join();
+  socket_read.join();
   ads1256.ADS1256_close();
   close(sock);
   close(sock_listen);
@@ -124,7 +138,7 @@ void DATA::getADC() {
     exit(0);
   }
   timeval time;
-  while (true) {
+  while (run_measure) {
     m.lock();
     buf.len++;
     // data[j].raw= ads1256.AnalogReadRawSync();  //同期をとり、セトリング・タイムを制御して測定
@@ -135,7 +149,7 @@ void DATA::getADC() {
   }
 }
 
-void DATA::sendData(int sock) {
+void DATA::write_socket(int sock) {
   cpu_set_t cpu_set;
   int result;
   CPU_ZERO(&cpu_set);
@@ -145,19 +159,43 @@ void DATA::sendData(int sock) {
     std::cerr << "ERROR" << std::endl;
     exit(0);
   }
-  int i = 100000;
-  while (i > 0) {
-    // for (int i = 0; i < 100; i++) {
+  while (run_measure) {
     m.lock();
     if (buf.len >= 0) {
       write(sock, buf.data, sizeof(send_data) * buf.len);
       // std::cout << buf.len << std::endl;
-      i = i - buf.len;
       buf.len = -1;
-      // memset(buf.data, 0, sizeof(buf.data));
+      memset(buf.data, 0, sizeof(buf.data));
     }
     m.unlock();
     usleep(1000);
+  }
+  exit(0);
+}
+
+void DATA::read_socket(int sock) {
+  cpu_set_t cpu_set;
+  int result;
+  CPU_ZERO(&cpu_set);
+  CPU_SET(2, &cpu_set);
+  result = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpu_set);
+  if (result != 0) {
+    std::cerr << "ERROR" << std::endl;
+    exit(0);
+  }
+
+  while (!com.kill) {
+    read(sock, &com, sizeof(com));
+    run_measure = false;
+    ads1256.setSampleRate(com.rate);
+    ads1256.setAIN(com.positive, com.negative);
+    ads1256.setPGA(com.gain);
+    usleep(1000000);
+    ads1256.selfCal();  // ADCの自動校正
+
+    ads1256.drdy_ready();    //校正の終了を待つ
+    ads1256.enable_event();  // drdyのイベント検出を有効化
+    run_measure = com.run;
   }
   exit(0);
 }
