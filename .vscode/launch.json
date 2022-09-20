@@ -30,7 +30,7 @@
             "targetArchitecture": "${env:ARCH}",
             "preLaunchTask": "start debug",
             "miDebuggerPath": "/usr/bin/gdb-multiarch",
-            "miDebuggerServerAddress": "${env:REMOTE_HOST}:10000",
+            "miDebuggerServerAddress": "${env:REMOTE_HOST}:50000",
             "logging": {
                 "engineLogging": true
             }

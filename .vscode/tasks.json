@@ -12,7 +12,7 @@
                 "-o",
                 "${workspaceFolder}/${workspaceFolderBasename}.elf",
                 "-Wall",
-                "-std=c++17",
+                "-std=c++20",
                 "-pthread"
             ],
             "options": {
@@ -61,7 +61,7 @@
                 "/home/${env:REMOTE_USER}/${workspaceFolderBasename}",
                 "&&",
                 "gdbserver",
-                "localhost:10000",
+                "localhost:50000",
                 "${workspaceFolderBasename}.elf",
                 "\""
             ],

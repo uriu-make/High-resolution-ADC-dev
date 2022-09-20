@@ -40,11 +40,11 @@ class DATA {
     __u8 gain;
     __u8 positive;
     __u8 negative;
-    bool buf;
-    bool sync;
+    __u8 buf;
+    __u8 sync;
     __u8 mode;
-    bool run;
-    bool kill = false;
+    __u8 run;
+    __u8 kill = 0;
   };
   struct COMMAND com;
   bool run_measure = false;
@@ -68,7 +68,7 @@ int main() {
 
   pid = getpid();
   CPU_ZERO(&cpu_set);
-  CPU_SET(1, &cpu_set);
+  CPU_SET(0, &cpu_set);
 
   result = sched_setaffinity(pid, sizeof(cpu_set_t), &cpu_set);
   if (result != 0) {
@@ -83,16 +83,16 @@ int main() {
   ads1256.init();        // GPIOなどを初期化
   ads1256.setVREF(2.5);  //基準電圧を2.5Vに設定
   ads1256.reset();       // ADS1256をリセット
-  usleep(50000);
-  ads1256.setClockOUT(CLOCK_OFF);         //外部クロック出力は使用しない
-  ads1256.setSampleRate(DATARATE_30000);  //サンプルレートを30kSPSに設定
-  ads1256.setAIN(AIN0, AGND);             //正をAIN6、負をAIN7に設定する
-  ads1256.setPGA(GAIN_1);                 // PGAのゲインを設定
-  usleep(1000000);
-  ads1256.selfCal();  // ADCの自動校正
+  // usleep(50000);
+  // ads1256.setClockOUT(CLOCK_OFF);         //外部クロック出力は使用しない
+  // ads1256.setSampleRate(DATARATE_30000);  //サンプルレートを30kSPSに設定
+  // ads1256.setAIN(AIN0, AGND);             //正をAIN6、負をAIN7に設定する
+  // ads1256.setPGA(GAIN_1);                 // PGAのゲインを設定
+  // usleep(1000000);
+  // ads1256.selfCal();  // ADCの自動校正
 
-  ads1256.drdy_ready();    //校正の終了を待つ
-  ads1256.enable_event();  // drdyのイベント検出を有効化
+  // ads1256.drdy_ready();    //校正の終了を待つ
+  // ads1256.enable_event();  // drdyのイベント検出を有効化
 
   //ソケット作成
   int sock_listen = socket(AF_INET, SOCK_STREAM, 0);
@@ -114,12 +114,15 @@ int main() {
   // usleep(1000);
 
   // std::printf("t,volt\n");
-  std::fflush(stdout);
+  // std::fflush(stdout);
+  // std::jthread adc{&DATA::getADC, &data};
+
   std::thread adc{&DATA::getADC, &data};
   std::thread socket_write{&DATA::write_socket, &data, sock};
   std::thread socket_read(&DATA::read_socket, &data, sock);
   adc.join();
   socket_write.join();
+  // data.read_socket(sock);
   socket_read.join();
   ads1256.ADS1256_close();
   close(sock);
@@ -138,18 +141,24 @@ void DATA::getADC() {
     exit(0);
   }
   timeval time;
-  while (run_measure) {
-    m.lock();
-    buf.len++;
-    // data[j].raw= ads1256.AnalogReadRawSync();  //同期をとり、セトリング・タイムを制御して測定
-    buf.data[buf.len].volt = ads1256.AnalogRead();  //同期を取らずにデータを取る
-    gettimeofday(&time, NULL);
-    buf.data[buf.len].t = time.tv_sec * 1000000 + time.tv_usec;
-    m.unlock();
+  double v;
+  while (true) {
+    if (run_measure) {
+      // data[j].raw= ads1256.AnalogReadRawSync();  //同期をとり、セトリング・タイムを制御して測定
+      v = ads1256.AnalogRead();  //同期を取らずにデータを取る
+      gettimeofday(&time, NULL);
+
+      m.lock();
+      buf.len++;
+      buf.data[buf.len].volt = v;
+      buf.data[buf.len].t = time.tv_sec * 1000000 + time.tv_usec;
+      m.unlock();
+    }
   }
 }
 
 void DATA::write_socket(int sock) {
+  std::this_thread::yield();
   cpu_set_t cpu_set;
   int result;
   CPU_ZERO(&cpu_set);
@@ -159,43 +168,62 @@ void DATA::write_socket(int sock) {
     std::cerr << "ERROR" << std::endl;
     exit(0);
   }
-  while (run_measure) {
-    m.lock();
-    if (buf.len >= 0) {
-      write(sock, buf.data, sizeof(send_data) * buf.len);
-      // std::cout << buf.len << std::endl;
-      buf.len = -1;
-      memset(buf.data, 0, sizeof(buf.data));
+  while (true) {
+    if (run_measure) {
+      m.lock();
+      if (buf.len >= 0) {
+        write(sock, buf.data, sizeof(send_data) * (buf.len + 1));
+        // for (int i = 0; i < buf.len + 1; i++) {
+        //   std::cerr << std::to_string(buf.data[i].volt) << ":" << std::to_string(buf.len) << std::endl;
+        // }
+        // std::cerr << "end" << std::endl;
+        buf.len = -1;
+        memset(buf.data, 0, sizeof(buf.data));
+      }
+      m.unlock();
+      usleep(1000);
     }
-    m.unlock();
-    usleep(1000);
   }
-  exit(0);
 }
 
 void DATA::read_socket(int sock) {
+  // std::this_thread::yield();
   cpu_set_t cpu_set;
   int result;
   CPU_ZERO(&cpu_set);
-  CPU_SET(2, &cpu_set);
+  CPU_SET(1, &cpu_set);
   result = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpu_set);
   if (result != 0) {
     std::cerr << "ERROR" << std::endl;
     exit(0);
   }
 
-  while (!com.kill) {
-    read(sock, &com, sizeof(com));
-    run_measure = false;
-    ads1256.setSampleRate(com.rate);
-    ads1256.setAIN(com.positive, com.negative);
-    ads1256.setPGA(com.gain);
-    usleep(1000000);
-    ads1256.selfCal();  // ADCの自動校正
+  while (true) {
+    int result = read(sock, &com, sizeof(com));
 
-    ads1256.drdy_ready();    //校正の終了を待つ
-    ads1256.enable_event();  // drdyのイベント検出を有効化
-    run_measure = com.run;
+    if (result > 0) {
+      m.lock();
+      run_measure = false;
+      m.unlock();
+
+      if (com.kill) {
+        exit(0);
+      }
+
+      ads1256.setSampleRate(com.rate);
+      ads1256.setAIN(com.positive, com.negative);
+      ads1256.setPGA(com.gain);
+      ads1256.selfCal();  // ADCの自動校正
+
+      ads1256.drdy_ready();  //校正の終了を待つ
+      ads1256.disable_event();
+      ads1256.gpio_reset();
+      ads1256.enable_event();  // drdyのイベント検出を有効化
+      m.lock();
+      buf.len = -1;
+      memset(buf.data, 0, sizeof(buf.data));
+      run_measure = (bool)com.run;
+      m.unlock();
+    }
   }
-  exit(0);
 }
