@@ -7,8 +7,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <sched.h>
-#include <queue>
 #include <mutex>
 #include <thread>
 
@@ -57,9 +55,9 @@ class DATA {
 
 DATA data;
 
-void message() {
-  std::cout << "socket is close" << std::endl;
-}
+// void message() {
+//   std::cout << "socket is close" << std::endl;
+// }
 
 int main() {
   pid_t pid;
@@ -75,7 +73,7 @@ int main() {
     std::cerr << "ERROR" << std::endl;
     exit(0);
   }
-  atexit(message);
+  // atexit(message);
 
   //初期化
 
@@ -110,20 +108,24 @@ int main() {
   do {
     sock = accept(sock_listen, (struct sockaddr*)&client_addr, &len);
   } while (sock <= 0);
-  printf("accepted.\n");
+  // printf("accepted.\n");
   // usleep(1000);
 
   // std::printf("t,volt\n");
   // std::fflush(stdout);
   // std::jthread adc{&DATA::getADC, &data};
 
-  std::thread adc{&DATA::getADC, &data};
-  std::thread socket_write{&DATA::write_socket, &data, sock};
+  std::jthread adc{&DATA::getADC, &data};
+  std::jthread socket_write{&DATA::write_socket, &data, sock};
   std::thread socket_read(&DATA::read_socket, &data, sock);
   adc.join();
   socket_write.join();
   // data.read_socket(sock);
   socket_read.join();
+
+  adc.request_stop();
+  socket_write.request_stop();
+
   ads1256.ADS1256_close();
   close(sock);
   close(sock_listen);
@@ -142,7 +144,7 @@ void DATA::getADC() {
   }
   timeval time;
   double v;
-  while (true) {
+  while (!com.kill) {
     if (run_measure) {
       // data[j].raw= ads1256.AnalogReadRawSync();  //同期をとり、セトリング・タイムを制御して測定
       v = ads1256.AnalogRead();  //同期を取らずにデータを取る
@@ -158,7 +160,6 @@ void DATA::getADC() {
 }
 
 void DATA::write_socket(int sock) {
-  std::this_thread::yield();
   cpu_set_t cpu_set;
   int result;
   CPU_ZERO(&cpu_set);
@@ -168,26 +169,22 @@ void DATA::write_socket(int sock) {
     std::cerr << "ERROR" << std::endl;
     exit(0);
   }
-  while (true) {
+  while (!com.kill) {
     if (run_measure) {
       m.lock();
       if (buf.len >= 0) {
         write(sock, buf.data, sizeof(send_data) * (buf.len + 1));
-        // for (int i = 0; i < buf.len + 1; i++) {
-        //   std::cerr << std::to_string(buf.data[i].volt) << ":" << std::to_string(buf.len) << std::endl;
-        // }
-        // std::cerr << "end" << std::endl;
         buf.len = -1;
         memset(buf.data, 0, sizeof(buf.data));
       }
       m.unlock();
-      usleep(1000);
+      usleep(2000);
     }
   }
 }
 
 void DATA::read_socket(int sock) {
-  // std::this_thread::yield();
+  std::this_thread::yield();
   cpu_set_t cpu_set;
   int result;
   CPU_ZERO(&cpu_set);
@@ -207,7 +204,7 @@ void DATA::read_socket(int sock) {
       m.unlock();
 
       if (com.kill) {
-        exit(0);
+        break;
       }
 
       ads1256.setSampleRate(com.rate);
