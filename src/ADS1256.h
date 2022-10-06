@@ -1,3 +1,4 @@
+#include <sys/time.h>
 #include <fcntl.h>
 #include <linux/gpio.h>
 #include <linux/spi/spidev.h>
@@ -116,9 +117,9 @@ class ADS1256 : private SPI, private GPIO {
   double AnalogRead(void);  // ADCの値を電圧で返す
   int AnalogReadRaw(void);  // ADCの値を生で返す
 
-  double AnalogReadSync(void);  // ADCの値を電圧で返す
-  int AnalogReadRawSync(void);  // ADCの値を生で返す
-  double convertVolt(int raw);  //生データを電圧に変換
+  double AnalogReadSync(struct timeval *t);  // ADCの値を電圧で返す
+  int AnalogReadRawSync(struct timeval *t);  // ADCの値を生で返す
+  double convertVolt(int raw);               //生データを電圧に変換
   void ADS1256_close(void);
 
   void gpio_reset(void);

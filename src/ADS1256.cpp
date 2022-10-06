@@ -69,7 +69,7 @@ int ADS1256::init(void) {
 }
 
 //指定レジスタの読み取り
-int ADS1256::ReadReg(__u8 reg, __u8* value) {
+int ADS1256::ReadReg(__u8 reg, __u8 *value) {
   __u8 tx[2];
   struct spi_ioc_transfer arg[2] = {0};
 
@@ -319,12 +319,12 @@ int ADS1256::AnalogReadRaw(void) {
   return (rx[0] << 16) | (rx[1] << 8) | rx[2];
 }
 
-double ADS1256::AnalogReadSync(void) {
-  return ADS1256::convertVolt(ADS1256::AnalogReadRawSync());
+double ADS1256::AnalogReadSync(struct timeval *t) {
+  return ADS1256::convertVolt(ADS1256::AnalogReadRawSync(t));
 }
 
 // ADCの値を生で返す
-int ADS1256::AnalogReadRawSync(void) {
+int ADS1256::AnalogReadRawSync(struct timeval *t) {
   struct spi_ioc_transfer arg[2] = {0};
   struct gpio_v2_line_event event;
   __u8 tx = 0b00000001;
@@ -348,6 +348,7 @@ int ADS1256::AnalogReadRawSync(void) {
 
   ADS1256::gpio_write(sync_pin, LOW);
   usleep(4 * 1000000 / CLOCK);
+  gettimeofday(t, NULL);
   ADS1256::gpio_write(sync_pin, HIGH);
   ADS1256::gpio_reset();
   ADS1256::enable_event();
