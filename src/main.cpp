@@ -71,9 +71,7 @@ int main() {
   //初期化
   pthread_spinlock_t lock;
   int pshared = PTHREAD_PROCESS_SHARED;
-  int ret;
-  ret = pthread_spin_init(&lock, pshared);
-  // std::cout << std::to_string(ret) << std::endl;
+  pthread_spin_init(&lock, pshared);
 
   ads1256.open();        //デバイスを開く
   ads1256.init();        // GPIOなどを初期化
