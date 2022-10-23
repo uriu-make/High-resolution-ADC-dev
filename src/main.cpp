@@ -23,16 +23,14 @@ struct send_data {
   int64_t t;
 };
 
-struct buffer {
-  int len;
-  struct send_data data[SAMPLENUM];
-};
-
 ADS1256 ads1256("/dev/spidev0.0", "/dev/gpiochip0", DRDY, RESET, SYNC, ADS1256_CLOCK);
 
 class DATA {
  private:
-  struct buffer buf = {-1, 0};
+  int len = -1;
+  // struct send_data buf[SAMPLENUM] = {0};
+  double volt[SAMPLENUM] = {0};
+  int64_t t[SAMPLENUM] = {0};
   struct COMMAND {
     __u8 rate;
     __u8 gain;
@@ -55,10 +53,6 @@ class DATA {
 
 DATA data;
 
-// void message() {
-//   std::cout << "socket is close" << std::endl;
-// }
-
 int main() {
   pid_t pid;
   cpu_set_t cpu_set;
@@ -73,29 +67,18 @@ int main() {
     std::cerr << "ERROR" << std::endl;
     exit(0);
   }
-  // atexit(message);
 
   //初期化
   pthread_spinlock_t lock;
   int pshared = PTHREAD_PROCESS_SHARED;
   int ret;
   ret = pthread_spin_init(&lock, pshared);
-  std::cout << std::to_string(ret) << std::endl;
+  // std::cout << std::to_string(ret) << std::endl;
 
   ads1256.open();        //デバイスを開く
   ads1256.init();        // GPIOなどを初期化
   ads1256.setVREF(2.5);  //基準電圧を2.5Vに設定
   ads1256.reset();       // ADS1256をリセット
-  // usleep(50000);
-  // ads1256.setClockOUT(CLOCK_OFF);         //外部クロック出力は使用しない
-  // ads1256.setSampleRate(DATARATE_30000);  //サンプルレートを30kSPSに設定
-  // ads1256.setAIN(AIN0, AGND);             //正をAIN6、負をAIN7に設定する
-  // ads1256.setPGA(GAIN_1);                 // PGAのゲインを設定
-  // usleep(1000000);
-  // ads1256.selfCal();  // ADCの自動校正
-
-  // ads1256.drdy_ready();    //校正の終了を待つ
-  // ads1256.enable_event();  // drdyのイベント検出を有効化
 
   //ソケット作成
   int sock_listen = socket(AF_INET, SOCK_STREAM, 0);
@@ -113,19 +96,20 @@ int main() {
   do {
     sock = accept(sock_listen, (struct sockaddr *)&client_addr, &len);
   } while (sock <= 0);
-  // printf("accepted.\n");
-  // usleep(1000);
-
-  // std::printf("t,volt\n");
-  // std::fflush(stdout);
-  // std::jthread adc{&DATA::getADC, &data};
 
   std::jthread adc{&DATA::getADC, &data, &lock};
   std::jthread socket_write{&DATA::write_socket, &data, sock, &lock};
   std::thread socket_read(&DATA::read_socket, &data, sock, &lock);
+
+  // struct sched_param param;
+  // param.sched_priority = 0;
+  // std::cerr << pthread_setschedparam(adc.native_handle(), SCHED_FIFO, &param) << std::endl;
+
+  // param.sched_priority = 0;
+  // std::cerr << pthread_setschedparam(socket_write.native_handle(), SCHED_FIFO, &param) << std::endl;
+
   adc.join();
   socket_write.join();
-  // data.read_socket(sock);
   socket_read.join();
 
   adc.request_stop();
@@ -143,6 +127,7 @@ void DATA::getADC(pthread_spinlock_t *spin) {
   CPU_ZERO(&cpu_set);
   CPU_SET(3, &cpu_set);
   result = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpu_set);
+
   if (result != 0) {
     std::cerr << "ERROR" << std::endl;
     exit(0);
@@ -153,15 +138,14 @@ void DATA::getADC(pthread_spinlock_t *spin) {
       case 0:
         while (run_measure) {
           pthread_spin_lock(spin);
-          buf.len++;
+          len++;
           if (com.sync) {
-            buf.data[buf.len].volt = ads1256.AnalogReadSync(&time);  //同期を取らずにデータを取る
+            volt[len] = ads1256.AnalogReadSync(&time);
           } else {
-            buf.data[buf.len].volt = ads1256.AnalogRead();
+            volt[len] = ads1256.AnalogRead();  //同期を取らずにデータを取る
             gettimeofday(&time, NULL);
           }
-          buf.data[buf.len].t = time.tv_sec * 1000000 + time.tv_usec;
-          // m.unlock();
+          t[len] = time.tv_sec * 1000000 + time.tv_usec;
           pthread_spin_unlock(spin);
         }
         break;
@@ -182,19 +166,17 @@ void DATA::write_socket(int sock, pthread_spinlock_t *spin) {
 
   while (!com.kill) {
     if (run_measure) {
-      if (buf.len > -1) {
-        // m.lock();
-        pthread_spin_lock(spin);
-        buf.len++;
-        write(sock, &buf.len, sizeof(buf.len));
-        write(sock, buf.data, sizeof(send_data) * (buf.len));
-        buf.len = -1;
-        // memset(buf.data, 0, sizeof(buf.data));
-        // m.unlock();
-        pthread_spin_unlock(spin);
+      pthread_spin_lock(spin);
+      if (len > -1) {
+        len++;
+        send(sock, &len, sizeof(int), MSG_MORE);
+        send(sock, volt, sizeof(double) * len, MSG_MORE);
+        send(sock, t, sizeof(int64_t) * len, 0);
+        // send(sock, buf, sizeof(send_data) * (len), 0);
+        len = -1;
       }
+      pthread_spin_unlock(spin);
       std::this_thread::sleep_for(std::chrono::microseconds(1000));
-      // usleep(2000);
     }
   }
 }
@@ -215,10 +197,8 @@ void DATA::read_socket(int sock, pthread_spinlock_t *spin) {
     int result = read(sock, &com, sizeof(com));
 
     if (result > 0) {
-      // m.lock();
       pthread_spin_lock(spin);
       run_measure = false;
-      // m.unlock();
       pthread_spin_unlock(spin);
 
       if (com.kill) {
@@ -234,12 +214,9 @@ void DATA::read_socket(int sock, pthread_spinlock_t *spin) {
       ads1256.disable_event();
       ads1256.gpio_reset();
       ads1256.enable_event();  // drdyのイベント検出を有効化
-      // m.lock();
       pthread_spin_lock(spin);
-      buf.len = -1;
-      memset(buf.data, 0, sizeof(buf.data));
+      len = -1;
       run_measure = (bool)com.run;
-      // m.unlock();
       pthread_spin_unlock(spin);
     }
   }
