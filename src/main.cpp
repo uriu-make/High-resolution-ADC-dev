@@ -16,21 +16,22 @@
 #define RESET         18
 #define SYNC          27
 
-#define SAMPLENUM 20000
+#define SAMPLENUM 256
 
 struct send_data {
-  double volt;
-  int64_t t;
+  int32_t len;
+  double volt[SAMPLENUM];
+  int64_t t[SAMPLENUM];
 };
 
 ADS1256 ads1256("/dev/spidev0.0", "/dev/gpiochip0", DRDY, RESET, SYNC, ADS1256_CLOCK);
 
 class DATA {
  private:
-  int len = -1;
-  // struct send_data buf[SAMPLENUM] = {0};
-  double volt[SAMPLENUM] = {0};
-  int64_t t[SAMPLENUM] = {0};
+  // int len = -1;
+  struct send_data buf = {-1};
+  // double volt[SAMPLENUM] = {0};
+  // int64_t t[SAMPLENUM] = {0};
   struct COMMAND {
     __u8 rate;
     __u8 gain;
@@ -136,14 +137,14 @@ void DATA::getADC(pthread_spinlock_t *spin) {
       case 0:
         while (run_measure) {
           pthread_spin_lock(spin);
-          len++;
+          buf.len++;
           if (com.sync) {
-            volt[len] = ads1256.AnalogReadSync(&time);
+            buf.volt[buf.len] = ads1256.AnalogReadSync(&time);
           } else {
-            volt[len] = ads1256.AnalogRead();  //同期を取らずにデータを取る
+            buf.volt[buf.len] = ads1256.AnalogRead();  //同期を取らずにデータを取る
             gettimeofday(&time, NULL);
           }
-          t[len] = time.tv_sec * 1000000 + time.tv_usec;
+          buf.t[buf.len] = time.tv_sec * 1000000 + time.tv_usec;
           pthread_spin_unlock(spin);
         }
         break;
@@ -165,13 +166,15 @@ void DATA::write_socket(int sock, pthread_spinlock_t *spin) {
   while (!com.kill) {
     if (run_measure) {
       pthread_spin_lock(spin);
-      if (len > -1) {
-        len++;
-        send(sock, &len, sizeof(int), MSG_MORE);
-        send(sock, volt, sizeof(double) * len, MSG_MORE);
-        send(sock, t, sizeof(int64_t) * len, 0);
+      if (buf.len > -1) {
+        buf.len++;
+        send(sock, &buf, sizeof(buf), 0);
+
+        // send(sock, &len, sizeof(int), MSG_MORE);
+        // send(sock, volt, sizeof(double) * len, MSG_MORE);
+        // send(sock, t, sizeof(int64_t) * len, MSG_MORE);
         // send(sock, buf, sizeof(send_data) * (len), 0);
-        len = -1;
+        buf.len = -1;
       }
       pthread_spin_unlock(spin);
       std::this_thread::sleep_for(std::chrono::microseconds(1000));
@@ -213,7 +216,7 @@ void DATA::read_socket(int sock, pthread_spinlock_t *spin) {
       ads1256.gpio_reset();
       ads1256.enable_event();  // drdyのイベント検出を有効化
       pthread_spin_lock(spin);
-      len = -1;
+      buf.len = -1;
       run_measure = (bool)com.run;
       pthread_spin_unlock(spin);
     }
