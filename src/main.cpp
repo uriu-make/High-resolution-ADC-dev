@@ -169,15 +169,15 @@ void DATA::write_socket(int sock, pthread_spinlock_t *spin) {
       if (buf.len > -1) {
         buf.len++;
         send(sock, &buf, sizeof(buf), 0);
-
-        // send(sock, &len, sizeof(int), MSG_MORE);
-        // send(sock, volt, sizeof(double) * len, MSG_MORE);
-        // send(sock, t, sizeof(int64_t) * len, MSG_MORE);
-        // send(sock, buf, sizeof(send_data) * (len), 0);
         buf.len = -1;
       }
       pthread_spin_unlock(spin);
       std::this_thread::sleep_for(std::chrono::microseconds(1000));
+    } else {
+      pthread_spin_lock(spin);
+      buf.len = -1;
+      send(sock, &buf, sizeof(buf), 0);
+      pthread_spin_unlock(spin);
     }
   }
 }
