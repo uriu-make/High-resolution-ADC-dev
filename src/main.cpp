@@ -16,12 +16,12 @@
 #define RESET         18
 #define SYNC          27
 
-#define SAMPLENUM 256
+#define SAMPLELEN 128
 
 struct send_data {
   int32_t len;
-  double volt[SAMPLENUM];
-  int64_t t[SAMPLENUM];
+  double volt[SAMPLELEN];
+  int64_t t[SAMPLELEN];
 };
 
 ADS1256 ads1256("/dev/spidev0.0", "/dev/gpiochip0", DRDY, RESET, SYNC, ADS1256_CLOCK);
@@ -30,8 +30,8 @@ class DATA {
  private:
   // int len = -1;
   struct send_data buf = {-1};
-  // double volt[SAMPLENUM] = {0};
-  // int64_t t[SAMPLENUM] = {0};
+  // double volt[SAMPLELEN] = {0};
+  // int64_t t[SAMPLELEN] = {0};
   struct COMMAND {
     __u8 rate;
     __u8 gain;
@@ -172,7 +172,7 @@ void DATA::write_socket(int sock, pthread_spinlock_t *spin) {
         buf.len = -1;
       }
       pthread_spin_unlock(spin);
-      std::this_thread::sleep_for(std::chrono::microseconds(1000));
+      std::this_thread::sleep_for(std::chrono::microseconds(5000));
     } else {
       pthread_spin_lock(spin);
       buf.len = -1;
