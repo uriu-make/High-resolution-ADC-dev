@@ -195,7 +195,7 @@ void DATA::read_socket(int sock, pthread_spinlock_t *spin) {
   }
 
   while (true) {
-    int result = read(sock, &com, sizeof(com));
+    int result = recv(sock, &com, sizeof(com), MSG_WAITALL);
 
     if (result > 0) {
       pthread_spin_lock(spin);
