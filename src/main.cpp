@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sys/time.h>
 #include "ADS1256.h"
+#include "NUFFT.h"
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -16,7 +17,7 @@
 #define RESET         18
 #define SYNC          27
 
-#define SAMPLELEN 128
+#define SAMPLELEN 126
 
 struct send_data {
   int32_t len;
@@ -28,10 +29,8 @@ ADS1256 ads1256("/dev/spidev0.0", "/dev/gpiochip0", DRDY, RESET, SYNC, ADS1256_C
 
 class DATA {
  private:
-  // int len = -1;
   struct send_data buf = {-1};
-  // double volt[SAMPLELEN] = {0};
-  // int64_t t[SAMPLELEN] = {0};
+
   struct COMMAND {
     __u8 rate;
     __u8 gain;
