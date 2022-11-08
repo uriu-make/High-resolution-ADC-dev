@@ -99,13 +99,6 @@ int main() {
   std::jthread socket_write{&DATA::write_socket, &data, sock, &lock};
   std::thread socket_read(&DATA::read_socket, &data, sock, &lock);
 
-  // struct sched_param param;
-  // param.sched_priority = 0;
-  // std::cerr << pthread_setschedparam(adc.native_handle(), SCHED_FIFO, &param) << std::endl;
-
-  // param.sched_priority = 0;
-  // std::cerr << pthread_setschedparam(socket_write.native_handle(), SCHED_FIFO, &param) << std::endl;
-
   adc.join();
   socket_write.join();
   socket_read.join();
@@ -162,16 +155,37 @@ void DATA::write_socket(int sock, pthread_spinlock_t *spin) {
     exit(0);
   }
 
+  double t_buf[1000];
+  double t[1000];
+  double v[1000];
+  struct COMPLEX F[1000];
+  int writepoint = 0;
+
   while (!com.kill) {
     if (run_measure) {
-      pthread_spin_lock(spin);
-      if (buf.len > -1) {
-        buf.len++;
-        send(sock, &buf, sizeof(buf), 0);
-        buf.len = -1;
+      if (com.mode == 0) {
+        pthread_spin_lock(spin);
+        if (buf.len > -1) {
+          buf.len++;
+          send(sock, &buf, sizeof(buf), 0);
+          buf.len = -1;
+        }
+        pthread_spin_unlock(spin);
+        std::this_thread::sleep_for(std::chrono::microseconds(5000));
+      } else if (com.mode == 1) {
+        pthread_spin_lock(spin);
+        writepoint = std::clamp(writepoint + buf.len, 0, 1000);
+        memcpy(t_buf, &t_buf[buf.len], sizeof(int64_t) * (1000 - buf.len));
+        memcpy(v, &v[buf.len], sizeof(double) * (1000 - buf.len));
+
+        memcpy(&t_buf[1000 - buf.len], buf.t, sizeof(int64_t) * buf.len);
+        memcpy(&v[1000 - buf.len], buf.volt, sizeof(double) * buf.len);
+
+        pthread_spin_unlock(spin);
+        if (writepoint == 1000) {
+          nudft(v, t, -2.0 * M_PI / 1000, F, 1000);
+        }
       }
-      pthread_spin_unlock(spin);
-      std::this_thread::sleep_for(std::chrono::microseconds(5000));
     } else {
       pthread_spin_lock(spin);
       buf.len = -1;
