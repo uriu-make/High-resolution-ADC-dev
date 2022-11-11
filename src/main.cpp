@@ -44,11 +44,15 @@ class DATA {
   };
   struct COMMAND com;
   bool run_measure = false;
+  pthread_spinlock_t *spin;
 
  public:
-  void getADC(pthread_spinlock_t *spin);
-  void write_socket(int sock, pthread_spinlock_t *spin);
-  void read_socket(int sock, pthread_spinlock_t *spin);
+  void set_pthread_spinlock_t(pthread_spinlock_t *spin) {
+    this->spin = spin;
+  }
+  void getADC(void);
+  void write_socket(int sock);
+  void read_socket(int sock);
 };
 
 DATA data;
@@ -94,10 +98,11 @@ int main() {
   do {
     sock = accept(sock_listen, (struct sockaddr *)&client_addr, &len);
   } while (sock <= 0);
+  data.set_pthread_spinlock_t(&lock);
 
-  std::jthread adc{&DATA::getADC, &data, &lock};
-  std::jthread socket_write{&DATA::write_socket, &data, sock, &lock};
-  std::thread socket_read(&DATA::read_socket, &data, sock, &lock);
+  std::jthread adc{&DATA::getADC, &data};
+  std::jthread socket_write{&DATA::write_socket, &data, sock};
+  std::thread socket_read(&DATA::read_socket, &data, sock);
 
   adc.join();
   socket_write.join();
@@ -112,7 +117,7 @@ int main() {
   return 0;
 }
 
-void DATA::getADC(pthread_spinlock_t *spin) {
+void DATA::getADC() {
   cpu_set_t cpu_set;
   int result;
   CPU_ZERO(&cpu_set);
@@ -125,26 +130,28 @@ void DATA::getADC(pthread_spinlock_t *spin) {
   }
   struct timeval time;
   while (!com.kill) {
-    switch (com.mode) {
-      case 0:
-        while (run_measure) {
-          pthread_spin_lock(spin);
-          buf.len++;
-          if (com.sync) {
-            buf.volt[buf.len] = ads1256.AnalogReadSync(&time);
-          } else {
-            buf.volt[buf.len] = ads1256.AnalogRead();  //同期を取らずにデータを取る
-            gettimeofday(&time, NULL);
-          }
-          buf.t[buf.len] = time.tv_sec * 1000000 + time.tv_usec;
-          pthread_spin_unlock(spin);
-        }
-        break;
+    if (com.sync) {
+      while (run_measure) {
+        pthread_spin_lock(spin);
+        buf.len++;
+        buf.volt[buf.len] = ads1256.AnalogReadSync(&time);
+        buf.t[buf.len] = time.tv_sec * 1000000 + time.tv_usec;
+        pthread_spin_unlock(spin);
+      }
+    } else {
+      while (run_measure) {
+        pthread_spin_lock(spin);
+        buf.len++;
+        buf.volt[buf.len] = ads1256.AnalogRead();  //同期を取らずにデータを取る
+        gettimeofday(&time, NULL);
+        buf.t[buf.len] = time.tv_sec * 1000000 + time.tv_usec;
+        pthread_spin_unlock(spin);
+      }
     }
   }
 }
 
-void DATA::write_socket(int sock, pthread_spinlock_t *spin) {
+void DATA::write_socket(int sock) {
   cpu_set_t cpu_set;
   int result;
   CPU_ZERO(&cpu_set);
@@ -174,16 +181,18 @@ void DATA::write_socket(int sock, pthread_spinlock_t *spin) {
         std::this_thread::sleep_for(std::chrono::microseconds(5000));
       } else if (com.mode == 1) {
         pthread_spin_lock(spin);
-        writepoint = std::clamp(writepoint + buf.len, 0, 1000);
-        memcpy(t_buf, &t_buf[buf.len], sizeof(int64_t) * (1000 - buf.len));
-        memcpy(v, &v[buf.len], sizeof(double) * (1000 - buf.len));
-
-        memcpy(&t_buf[1000 - buf.len], buf.t, sizeof(int64_t) * buf.len);
-        memcpy(&v[1000 - buf.len], buf.volt, sizeof(double) * buf.len);
-
+        if (buf.len > -1) {
+          buf.len++;
+          writepoint += buf.len;
+          memcpy(t_buf, &t_buf[buf.len], sizeof(int64_t) * (1000 - buf.len));
+          memcpy(v, &v[buf.len], sizeof(double) * (1000 - buf.len));
+          memcpy(&t_buf[1000 - buf.len], buf.t, sizeof(int64_t) * buf.len);
+          memcpy(&v[1000 - buf.len], buf.volt, sizeof(double) * buf.len);
+          buf.len = -1;
+        }
         pthread_spin_unlock(spin);
-        if (writepoint == 1000) {
-          nudft(v, t, -2.0 * M_PI / 1000, F, 1000);
+        if (writepoint >= 1000) {
+          nudft(v, t, -2.0 * M_PI / 100, F, 100);
         }
       }
     } else {
@@ -195,7 +204,7 @@ void DATA::write_socket(int sock, pthread_spinlock_t *spin) {
   }
 }
 
-void DATA::read_socket(int sock, pthread_spinlock_t *spin) {
+void DATA::read_socket(int sock) {
   std::this_thread::yield();
   cpu_set_t cpu_set;
   int result;
