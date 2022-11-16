@@ -98,11 +98,14 @@ int main() {
   do {
     sock = accept(sock_listen, (struct sockaddr *)&client_addr, &len);
   } while (sock <= 0);
+  close(sock_listen);
   data.set_pthread_spinlock_t(&lock);
 
   std::jthread adc{&DATA::getADC, &data};
   std::jthread socket_write{&DATA::write_socket, &data, sock};
-  std::thread socket_read(&DATA::read_socket, &data, sock);
+  std::jthread socket_read(&DATA::read_socket, &data, sock);
+
+  // sigaction(SIGPIPE, &(struct sigaction){SIG_IGN}, NULL);
 
   adc.join();
   socket_write.join();
@@ -110,6 +113,7 @@ int main() {
 
   adc.request_stop();
   socket_write.request_stop();
+  socket_read.request_stop();
 
   ads1256.ADS1256_close();
   close(sock);
@@ -174,7 +178,11 @@ void DATA::write_socket(int sock) {
         pthread_spin_lock(spin);
         if (buf.len > -1) {
           buf.len++;
-          send(sock, &buf, sizeof(buf), 0);
+          if (send(sock, &buf, sizeof(buf), 0) < 0) {
+            com.kill = 1;
+            pthread_spin_unlock(spin);
+            break;
+          }
           buf.len = -1;
         }
         pthread_spin_unlock(spin);
@@ -195,12 +203,12 @@ void DATA::write_socket(int sock) {
           nudft(v, t, -2.0 * M_PI / 100, F, 100);
         }
       }
-    } else {
-      pthread_spin_lock(spin);
-      buf.len = -1;
-      send(sock, &buf, sizeof(buf), 0);
-      pthread_spin_unlock(spin);
-    }
+    }  // else  {
+    //   pthread_spin_lock(spin);
+    //   buf.len = -1;
+    //   send(sock, &buf, sizeof(buf), 0);
+    //   pthread_spin_unlock(spin);
+    // }
   }
 }
 

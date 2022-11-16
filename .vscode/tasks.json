@@ -95,6 +95,16 @@
         },
         {
             "type": "shell",
+            "label": "run",
+            "command": "ssh",
+            "args": [
+                "${env:REMOTE_USER}@${env:REMOTE_HOST}",
+                "/home/${env:REMOTE_USER}/${workspaceFolderBasename}/${workspaceFolderBasename}.elf"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "type": "shell",
             "label": "build tasks",
             "dependsOn": [
                 "crossbuild-g++",
