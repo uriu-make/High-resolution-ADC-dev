@@ -34,11 +34,6 @@
                 "--exclude='.devcontainer/'",
                 "--exclude='.vscode/'",
                 "--exclude='.git/'",
-                "-e",
-                "\"ssh",
-                "-o",
-                "'StrictHostKeyChecking",
-                "no'\"",
                 ".",
                 "${env:REMOTE_USER}@${env:REMOTE_HOST}:/home/${env:REMOTE_USER}/${workspaceFolderBasename}"
             ],
