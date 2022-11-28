@@ -1,14 +1,13 @@
-#include <iostream>
-#include <sys/time.h>
 #include "ADS1256.h"
 #include "NUFFT.h"
 
+#include <iostream>
+#include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-// #include <mutex>
 #include <thread>
 #include <pthread.h>
 
@@ -104,8 +103,6 @@ int main() {
   std::jthread adc{&DATA::getADC, &data};
   std::jthread socket_write{&DATA::write_socket, &data, sock};
   std::jthread socket_read(&DATA::read_socket, &data, sock);
-
-  // sigaction(SIGPIPE, &(struct sigaction){SIG_IGN}, NULL);
 
   adc.join();
   socket_write.join();
@@ -203,12 +200,7 @@ void DATA::write_socket(int sock) {
           nudft(v, t, -2.0 * M_PI / 100, F, 100);
         }
       }
-    }  // else  {
-    //   pthread_spin_lock(spin);
-    //   buf.len = -1;
-    //   send(sock, &buf, sizeof(buf), 0);
-    //   pthread_spin_unlock(spin);
-    // }
+    }
   }
 }
 

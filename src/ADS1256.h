@@ -6,9 +6,6 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
-#include <time.h>
-#include <iostream>
-#include <poll.h>
 
 #include "spi.h"
 #include "gpio.h"
