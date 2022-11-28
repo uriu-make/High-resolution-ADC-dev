@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include <string>
 
 #include "spi.h"
 #include "gpio.h"
