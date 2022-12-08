@@ -13,7 +13,8 @@
                 "${workspaceFolder}/${workspaceFolderBasename}.elf",
                 "-Wall",
                 "-std=c++20",
-                "-pthread"
+                "-pthread",
+                "-lopenblas"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"

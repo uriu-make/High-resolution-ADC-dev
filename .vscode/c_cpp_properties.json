@@ -4,7 +4,9 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/usr/${env:CROSSBUILD}/**"
+                "/usr/include/**",
+                "/usr/${env:CROSSBUILD}/**",
+                "/usr/include/${env:CROSSBUILD}/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/${env:CXX}",

@@ -26,7 +26,7 @@ struct send_data {
 
 ADS1256 ads1256("/dev/spidev0.0", "/dev/gpiochip0", DRDY, RESET, SYNC, ADS1256_CLOCK);
 
-class DATA {
+class APP {
  private:
   struct send_data buf = {-1};
 
@@ -54,7 +54,7 @@ class DATA {
   void read_socket(int sock);
 };
 
-DATA data;
+APP app;
 
 int main() {
   pid_t pid;
@@ -98,11 +98,11 @@ int main() {
     sock = accept(sock_listen, (struct sockaddr *)&client_addr, &len);
   } while (sock <= 0);
   close(sock_listen);
-  data.set_pthread_spinlock_t(&lock);
+  app.set_pthread_spinlock_t(&lock);
 
-  std::jthread adc{&DATA::getADC, &data};
-  std::jthread socket_write{&DATA::write_socket, &data, sock};
-  std::jthread socket_read(&DATA::read_socket, &data, sock);
+  std::jthread adc{&APP::getADC, &app};
+  std::jthread socket_write{&APP::write_socket, &app, sock};
+  std::jthread socket_read(&APP::read_socket, &app, sock);
 
   adc.join();
   socket_write.join();
@@ -118,7 +118,7 @@ int main() {
   return 0;
 }
 
-void DATA::getADC() {
+void APP::getADC() {
   cpu_set_t cpu_set;
   int result;
   CPU_ZERO(&cpu_set);
@@ -152,7 +152,7 @@ void DATA::getADC() {
   }
 }
 
-void DATA::write_socket(int sock) {
+void APP::write_socket(int sock) {
   cpu_set_t cpu_set;
   int result;
   CPU_ZERO(&cpu_set);
@@ -204,7 +204,7 @@ void DATA::write_socket(int sock) {
   }
 }
 
-void DATA::read_socket(int sock) {
+void APP::read_socket(int sock) {
   std::this_thread::yield();
   cpu_set_t cpu_set;
   int result;
