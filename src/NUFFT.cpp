@@ -5,12 +5,8 @@ NUFFT::NUFFT(int m, int N, int q) {
   this->omega = std::polar(1.0, (2.0 * M_PI) / double(m * N));
   std::complex<double> F[(q + 1) * (q + 1)];
 
-  alpha_k = new std::complex<double>[(q + 1) * (q + 1)];
-  omega_k = new std::complex<double>[(q + 1) * (q + 1)];
-  tau = new std::complex<double>[(q + 1) * (q + 1)];
-  f_j = new std::complex<double>[(q + 1) * (q + 1)];
-  invF = new const std::complex<double>[(q + 1) * (q + 1)];
-  std::complex<double> *E = const_cast<std::complex<double> *>(invF);  // invF
+  invF = new std::complex<double>[(q + 1) * (q + 1)];
+  S_j = new std::complex<double>[N];
 
   std::complex<double> tmp;
   this->m = m;
@@ -33,8 +29,8 @@ NUFFT::NUFFT(int m, int N, int q) {
   for (int h = 0; h < q + 1; h++) {  // 単位行列
     for (int w = 0; w < q + 1; w++) {
       if (w == h) {
-        E[w + h * (q + 1)].real(1.0);
-        E[w + h * (q + 1)].imag(0.0);
+        invF[w + h * (q + 1)].real(1.0);
+        invF[w + h * (q + 1)].imag(0.0);
       }
     }
   }
@@ -45,7 +41,7 @@ NUFFT::NUFFT(int m, int N, int q) {
 
     for (int colmn = 0; colmn < q + 1; colmn++) {
       F[colmn + row * (q + 1)] = F[colmn + row * (q + 1)] / tmp;
-      E[colmn + row * (q + 1)] = E[colmn + row * (q + 1)] / tmp;
+      invF[colmn + row * (q + 1)] = invF[colmn + row * (q + 1)] / tmp;
     }
 
     for (int i = 0; i < q + 1; i++) {
@@ -53,14 +49,18 @@ NUFFT::NUFFT(int m, int N, int q) {
         tmp = F[row + i * (q + 1)];
         for (int colmn = 0; colmn < q + 1; colmn++) {
           F[colmn + i * (q + 1)] = F[colmn + i * (q + 1)] - F[colmn + row * (q + 1)] * tmp;
-          E[colmn + i * (q + 1)] = E[colmn + i * (q + 1)] - E[colmn + row * (q + 1)] * tmp;
+          invF[colmn + i * (q + 1)] = invF[colmn + i * (q + 1)] - invF[colmn + row * (q + 1)] * tmp;
         }
       }
     }
   }
+
+  for (int j = 0; j < N; j++) {
+    S_j[j] = std::cos(M_PI * (j - N / 2) / static_cast<double>(m * N));
+  }
 }
 
-void NUFFT::nufft(double *alpha, double *omega) {
+const void NUFFT::nufft(double *alpha, double *omega) {
   std::complex<double> blas_alpha = {std::complex<double>(1.0, 0.0)}, blas_beta = {std::complex<double>(0.0, 0.0)};
   std::complex<double> X[N][(q + 1) * 1];
 

@@ -197,7 +197,7 @@ void APP::write_socket(int sock) {
         }
         pthread_spin_unlock(spin);
         if (writepoint >= 1000) {
-          nudft(v, t, -2.0 * M_PI / 100, F, 100);
+          // nudft(v, t, -2.0 * M_PI / 100, F, 100);
         }
       }
     }

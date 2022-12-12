@@ -12,14 +12,12 @@ class NUFFT {
  private:
   int m, N, q;
   std::complex<double> omega;
-  std::complex<double> *alpha_k;
-  std::complex<double> *omega_k;
-  std::complex<double> *tau;
-  std::complex<double> *f_j;
-  const std::complex<double> *invF;  // F(m,N,q)
+  std::complex<double> *invF;  // F(m,N,q)
+  std::complex<double> *S_j;  // F(m,N,q)
+
   inline void fft(std::complex<double> *f, int N_orig);
 
  public:
   NUFFT(int m, int N, int q);
-  void nufft(double *alpha, double *omega);
+  const void nufft(double *alpha, double *omega);
 };
