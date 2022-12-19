@@ -6,7 +6,7 @@ NUFFT::NUFFT(int m, int N, int q) {
   std::complex<double> F[(q + 1) * (q + 1)];
 
   invF = new std::complex<double>[(q + 1) * (q + 1)];
-  S_j = new std::complex<double>[N];
+  S_j = new double[N];
 
   std::complex<double> tmp;
   this->m = m;
@@ -60,27 +60,54 @@ NUFFT::NUFFT(int m, int N, int q) {
   }
 }
 
-const void NUFFT::nufft(double *alpha, double *omega) {
+const void NUFFT::nufft(double *alpha, double *omega, std::complex<double> *f) {
   std::complex<double> blas_alpha = {std::complex<double>(1.0, 0.0)}, blas_beta = {std::complex<double>(0.0, 0.0)};
-  std::complex<double> X[N][(q + 1) * 1];
+  std::complex<double> X[N][(q + 1)];
+  std::complex<double> X_sum[N] = {{0.0, 0.0}};
 
-  for (int t = 0; t < N; t++) {    // すべてのx_j(omega_k)を計算
-    std::complex<double> a[q];     // x_j(omega_k)=F^{-1}*a
-    for (int k = 0; k < q; k++) {  // a_kの計算
+  std::complex<double> tau[m * N] = {std::complex<double>(0.0, 0.0)};
+  const double omega_tmp = omega[0];
+  double m_omega;
+  int floor_m_omega_k[N];
+  double dif_f_m_omega;
+  // int l_array[m * N];
+
+  for (int t = 0; t < N; t++) {  // すべてのx_j(omega_k)を計算
+    omega[t] = omega[t] - omega_tmp;
+    m_omega = m * omega[t];
+    floor_m_omega_k[t] = static_cast<int>(std::floor(m_omega));
+    dif_f_m_omega = m_omega - static_cast<double>(floor_m_omega_k[t]);
+
+    std::complex<double> a[q + 1];     // x_j(omega_k)=F^{-1}*a
+    for (int k = 0; k < q + 1; k++) {  // a_kの計算
       a[k] = std::complex<double>(0.0, 0.0);
-      for (int j = -N / 2; j < N / 2; j++) {
-        a[k] += std::polar(std::cos(M_PI * double(j) / double(N * m)), 2.0 * M_PI * (m * omega[t] - std::floor(m * omega[t]) + q / 2 - k) * j);
+      for (int j = -N / 2, i = 0; j < N / 2; j++, i++) {
+        a[k] += std::polar(S_j[j + N / 2], 2.0 * M_PI * (dif_f_m_omega + q / 2 - k) * j);
       }
     }
-    cblas_zgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, q + 1, 1, q + 1, &blas_alpha, invF, q + 1, a, 1, &blas_beta, &X[t], (q + 1));  // 1)
+    cblas_zgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, q + 1, 1, q + 1, &blas_alpha, invF, q + 1, a, 1, &blas_beta, &X[t], 1);
+    for (int i = 0; i < q + 1; i++) {  // Xの総和を計算
+      X_sum[t] += X[t][i];
+    }
   }
+
+  for (int j = 0; j < N; j++) {
+    for (int k = 0; k < N; k++) {
+      tau[floor_m_omega_k[k] + j] += alpha[k] * X_sum[j];
+    }
+  }
+  NUFFT::fft(tau, m * N);
+  for (int i = 0; i < N; i++) {
+    f[i] = tau[i] / S_j[i];
+  }
+  return;
 }
 
 inline void NUFFT::fft(std::complex<double> *f, int N_orig) {
   int m = int(std::log2(N_orig));
   for (int s = 0; s < m; s++) {
-    int div = int(std::pow(2, s));  // Number of divided data segments
-    int N = N_orig / div;           // Number of data points in each segment
+    int div = int(std::pow(2, s));
+    int N = N_orig / div;
     int n = N / 2;
     for (int j = 0; j < div; j++) {
       for (int i = 0; i < n; i++) {
