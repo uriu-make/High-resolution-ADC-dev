@@ -33,7 +33,7 @@ RUN dpkg --add-architecture $ARCH
 RUN apt-get update -q
 RUN apt-get install -y \
     crossbuild-essential-$ARCH \
-    libopenblas-dev:$ARCH
+    libopenblas64-dev:$ARCH
 
 RUN apt-get upgrade -y
 

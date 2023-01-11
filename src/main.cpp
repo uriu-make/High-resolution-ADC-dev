@@ -164,9 +164,9 @@ void APP::write_socket(int sock) {
   }
 
   double t_buf[1000];
-  double t[1000];
+  // double t[1000];
   double v[1000];
-  struct COMPLEX F[1000];
+  // struct COMPLEX F[1000];
   int writepoint = 0;
 
   while (!com.kill) {

@@ -1,5 +1,5 @@
 #include "NUFFT.h"
-#include <cblas.h>
+#include <cblas64.h>
 
 NUFFT::NUFFT(int m, int N, int q) {
   this->omega = std::polar(1.0, (2.0 * M_PI) / double(m * N));
