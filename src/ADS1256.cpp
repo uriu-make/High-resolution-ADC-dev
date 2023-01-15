@@ -85,7 +85,7 @@ int ADS1256::ReadReg(__u8 reg, __u8 *value) {
   arg[0].cs_change = 0;
 
   arg[1].tx_buf = (uintptr_t)NULL;
-  arg[1].rx_buf = (uintptr_t)value;
+  arg[1].rx_buf = (uintptr_t)&value;
   arg[1].len = 1;
   arg[1].delay_usecs = 0;
   arg[1].speed_hz = speed;
@@ -111,7 +111,7 @@ int ADS1256::WriteReg(__u8 reg, __u8 value) {
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
 
-  arg[1].tx_buf = (uintptr_t)value;
+  arg[1].tx_buf = (uintptr_t)&value;
   arg[1].rx_buf = (uintptr_t)NULL;
   arg[1].len = 1;
   arg[1].delay_usecs = 0;
