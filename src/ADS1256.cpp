@@ -76,16 +76,16 @@ int ADS1256::ReadReg(__u8 reg, __u8 *value) {
   tx[0] = 0b00010000 | (reg & 0b00001111);
   tx[1] = 0;
 
-  arg[0].tx_buf = (uintptr_t)&tx;
-  arg[0].rx_buf = (uintptr_t)NULL;
+  arg[0].tx_buf = reinterpret_cast<uintptr_t>(&tx);
+  arg[0].rx_buf = 0;
   arg[0].len = 2;
   arg[0].delay_usecs = delay_sclk;
   arg[0].speed_hz = speed;
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
 
-  arg[1].tx_buf = (uintptr_t)NULL;
-  arg[1].rx_buf = (uintptr_t)value;
+  arg[1].tx_buf = 0;
+  arg[1].rx_buf = reinterpret_cast<uintptr_t>(value);
   arg[1].len = 1;
   arg[1].delay_usecs = 0;
   arg[1].speed_hz = speed;
@@ -103,16 +103,16 @@ int ADS1256::WriteReg(__u8 reg, __u8 value) {
   tx[0] = 0b01010000 | (reg & 0b00001111);
   tx[1] = 0;
 
-  arg[0].tx_buf = (uintptr_t)tx;
-  arg[0].rx_buf = (uintptr_t)NULL;
+  arg[0].tx_buf = reinterpret_cast<uintptr_t>(tx);
+  arg[0].rx_buf = 0;
   arg[0].len = 2;
   arg[0].delay_usecs = delay_sclk;
   arg[0].speed_hz = speed;
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
 
-  arg[1].tx_buf = (uintptr_t)&value;
-  arg[1].rx_buf = (uintptr_t)NULL;
+  arg[1].tx_buf = reinterpret_cast<uintptr_t>(&value);
+  arg[1].rx_buf = 0;
   arg[1].len = 1;
   arg[1].delay_usecs = 0;
   arg[1].speed_hz = speed;
@@ -273,8 +273,8 @@ int ADS1256::selfCal(void) {
   __u8 tx = 0b11110000;
   struct spi_ioc_transfer arg = {0};
 
-  arg.tx_buf = (uintptr_t)&tx;
-  arg.rx_buf = (uintptr_t)NULL;
+  arg.tx_buf = reinterpret_cast<uintptr_t>(&tx);
+  arg.rx_buf = 0;
   arg.len = 1;
   arg.delay_usecs = 0;
   arg.speed_hz = speed;
@@ -295,16 +295,16 @@ int ADS1256::AnalogReadRaw(void) {
   __u8 tx = 0b00000001;
   __u8 rx[3] = {0};
 
-  arg[0].tx_buf = (uintptr_t)&tx;
-  arg[0].rx_buf = (uintptr_t)NULL;
+  arg[0].tx_buf = reinterpret_cast<uintptr_t>(&tx);
+  arg[0].rx_buf = 0;
   arg[0].len = 1;
   arg[0].delay_usecs = delay_sclk;
   arg[0].speed_hz = speed;
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
 
-  arg[1].tx_buf = (uintptr_t)NULL;
-  arg[1].rx_buf = (uintptr_t)rx;
+  arg[1].tx_buf = 0;
+  arg[1].rx_buf = reinterpret_cast<uintptr_t>(rx);
   arg[1].len = 3;
   arg[1].delay_usecs = 0;
   arg[1].speed_hz = speed;
@@ -330,16 +330,16 @@ int ADS1256::AnalogReadRawSync(struct timeval *t) {
   __u8 tx = 0b00000001;
   __u8 rx[3] = {0};
 
-  arg[0].tx_buf = (uintptr_t)&tx;
-  arg[0].rx_buf = (uintptr_t)NULL;
+  arg[0].tx_buf = reinterpret_cast<uintptr_t>(&tx);
+  arg[0].rx_buf = 0;
   arg[0].len = 1;
   arg[0].delay_usecs = delay_sclk;
   arg[0].speed_hz = speed;
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
 
-  arg[1].tx_buf = (uintptr_t)NULL;
-  arg[1].rx_buf = (uintptr_t)rx;
+  arg[1].tx_buf = 0;
+  arg[1].rx_buf = reinterpret_cast<uintptr_t>(rx);
   arg[1].len = 3;
   arg[1].delay_usecs = 0;
   arg[1].speed_hz = speed;
