@@ -10,7 +10,7 @@ DOWNSAMPLING::DOWNSAMPLING(int size, int N)
 DOWNSAMPLING::~DOWNSAMPLING() {
 }
 
-void DOWNSAMPLING::sampling(double *t, double *v, std::complex<double> *sample, int len) {
+int DOWNSAMPLING::sampling(double *t, double *v, std::complex<double> *sample, int len) {
   static int sum = 0;
   double tmp = 0.0;
   double ave_buf = 0.0;
@@ -36,7 +36,9 @@ void DOWNSAMPLING::sampling(double *t, double *v, std::complex<double> *sample, 
         i--;
       }
     }
+    return 0;
   }
+  return -1;
 }
 
 void DOWNSAMPLING::fft(std::complex<double> *f, int len) {
@@ -62,6 +64,7 @@ void DOWNSAMPLING::fft(std::complex<double> *f, int len) {
 }
 
 void DOWNSAMPLING::calc(double *t, double *v, int len, std::complex<double> *F) {
-  sampling(t, v, F, len);
-  fft(F, N);
+  if (sampling(t, v, F, len) == 0) {
+    fft(F, N);
+  }
 }

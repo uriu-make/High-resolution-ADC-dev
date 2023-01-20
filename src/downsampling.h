@@ -20,7 +20,7 @@ class DOWNSAMPLING {
  public:
   DOWNSAMPLING(int size, int N);
   ~DOWNSAMPLING();
-  void sampling(double *t, double *v, std::complex<double> *sample, int len);
+  int sampling(double *t, double *v, std::complex<double> *sample, int len);
   void fft(std::complex<double> *F, int len);
   void calc(double *t, double *v, int len, std::complex<double> *F);
 };
