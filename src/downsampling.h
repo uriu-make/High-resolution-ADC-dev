@@ -1,4 +1,5 @@
 #include <complex>
+#include <iostream>
 #include <string.h>
 #pragma once
 
@@ -10,28 +11,16 @@ struct buffer {
 
 class DOWNSAMPLING {
  private:
-  int size;
-  int N;
-  double rate;
+  const int size;
+  const int N;
   double *buf_v;
   double *buf_t;
-  double *sample;
+  double rate;
 
  public:
   DOWNSAMPLING(int size, int N);
   ~DOWNSAMPLING();
-  void sampling(double *t, double *v, int len);
-  void fft();
+  void sampling(double *t, double *v, std::complex<double> *sample, int len);
+  void fft(std::complex<double> *F, int len);
+  void calc(double *t, double *v, int len, std::complex<double> *F);
 };
-
-DOWNSAMPLING::DOWNSAMPLING(int size, int N) {
-  this->size = size;
-  this->N = N;
-  buf_t = new double[size];
-  buf_v = new double[size];
-  sample = new double[N];
-  rate = 1.0 / static_cast<double>(N);
-}
-
-DOWNSAMPLING::~DOWNSAMPLING() {
-}
