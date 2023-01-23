@@ -13,14 +13,15 @@ class DOWNSAMPLING {
  private:
   const int size;
   const int N;
+  const double rate;
+
   double *buf_v;
-  double *buf_t;
-  double rate;
+  int64_t *buf_t;
 
  public:
   DOWNSAMPLING(int size, int N);
   ~DOWNSAMPLING();
-  int sampling(double *t, double *v, std::complex<double> *sample, int len);
+  int sampling(int64_t *t, double *v, std::complex<double> *sample, int len);
   void fft(std::complex<double> *F, int len);
-  void calc(double *t, double *v, int len, std::complex<double> *F);
+  void calc(int64_t *t, double *v, int len, std::complex<double> *F);
 };
