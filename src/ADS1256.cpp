@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <iostream>
-#include <poll.h>
+#include <inttypes.h>
 
 #include "spi.h"
 #include "gpio.h"
@@ -68,7 +68,7 @@ int ADS1256::init(void) {
   return 0;
 }
 
-//指定レジスタの読み取り
+// 指定レジスタの読み取り
 int ADS1256::ReadReg(__u8 reg, __u8 *value) {
   __u8 tx[2];
   struct spi_ioc_transfer arg[2] = {0};
@@ -76,16 +76,16 @@ int ADS1256::ReadReg(__u8 reg, __u8 *value) {
   tx[0] = 0b00010000 | (reg & 0b00001111);
   tx[1] = 0;
 
-  arg[0].tx_buf = (__u64)&tx;
-  arg[0].rx_buf = (__u64)NULL;
+  arg[0].tx_buf = reinterpret_cast<uintptr_t>(&tx);
+  arg[0].rx_buf = 0;
   arg[0].len = 2;
   arg[0].delay_usecs = delay_sclk;
   arg[0].speed_hz = speed;
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
 
-  arg[1].tx_buf = (__u64)NULL;
-  arg[1].rx_buf = (__u64)value;
+  arg[1].tx_buf = 0;
+  arg[1].rx_buf = reinterpret_cast<uintptr_t>(value);
   arg[1].len = 1;
   arg[1].delay_usecs = 0;
   arg[1].speed_hz = speed;
@@ -95,7 +95,7 @@ int ADS1256::ReadReg(__u8 reg, __u8 *value) {
   return ADS1256::spi_transfer(arg, 2);
 }
 
-//指定レジスタに書き込み
+// 指定レジスタに書き込み
 int ADS1256::WriteReg(__u8 reg, __u8 value) {
   __u8 tx[2];
   struct spi_ioc_transfer arg[2] = {0};
@@ -103,16 +103,16 @@ int ADS1256::WriteReg(__u8 reg, __u8 value) {
   tx[0] = 0b01010000 | (reg & 0b00001111);
   tx[1] = 0;
 
-  arg[0].tx_buf = (__u64)&tx;
-  arg[0].rx_buf = (__u64)NULL;
+  arg[0].tx_buf = reinterpret_cast<uintptr_t>(tx);
+  arg[0].rx_buf = 0;
   arg[0].len = 2;
   arg[0].delay_usecs = delay_sclk;
   arg[0].speed_hz = speed;
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
 
-  arg[1].tx_buf = (__u64)&value;
-  arg[1].rx_buf = (__u64)NULL;
+  arg[1].tx_buf = reinterpret_cast<uintptr_t>(&value);
+  arg[1].rx_buf = 0;
   arg[1].len = 1;
   arg[1].delay_usecs = 0;
   arg[1].speed_hz = speed;
@@ -140,12 +140,12 @@ int ADS1256::setClock(void) {
   return ADS1256::spi_speed(ADS1256::CLOCK / 4);
 }
 
-//リファレンス電圧の設定
+// リファレンス電圧の設定
 void ADS1256::setVREF(double vref) {
   VREF = vref;
 }
 
-//アナログバッファの有効/無効
+// アナログバッファの有効/無効
 int ADS1256::setAnalogBuffer(bool buf) {
   __u8 reg, value;
   reg = 0b00000000;
@@ -161,13 +161,13 @@ int ADS1256::setAnalogBuffer(bool buf) {
   return ADS1256::WriteReg(reg, value);
 }
 
-//サンプリングレートの設定
+// サンプリングレートの設定
 int ADS1256::setSampleRate(__u8 rate) {
   __u8 reg = 0b00000011;
   return ADS1256::WriteReg(reg, rate);
 }
 
-//プログラマブルゲインアンプの設定
+// プログラマブルゲインアンプの設定
 int ADS1256::setPGA(__u8 gain) {
   __u8 reg, value;
   reg = 0b0000010;
@@ -184,7 +184,7 @@ int ADS1256::setPGA(__u8 gain) {
   return ADS1256::WriteReg(reg, value);
 }
 
-//アナログ入力のピンを設定
+// アナログ入力のピンを設定
 int ADS1256::setAIN(__u8 positive, __u8 negative) {
   __u8 reg, ain;
   reg = 0b00000001;
@@ -192,7 +192,7 @@ int ADS1256::setAIN(__u8 positive, __u8 negative) {
   return ADS1256::WriteReg(reg, ain);
 }
 
-//クロック出力を設定
+// クロック出力を設定
 int ADS1256::setClockOUT(__u8 mode) {
   __u8 reg, value;
   reg = 0b0000010;
@@ -204,7 +204,7 @@ int ADS1256::setClockOUT(__u8 mode) {
   return ADS1256::WriteReg(reg, value);
 }
 
-//開放/短絡センサー検出の設定
+// 開放/短絡センサー検出の設定
 int ADS1256::setSDC(__u8 mode) {
   __u8 reg, value;
   reg = 0b0000010;
@@ -268,13 +268,13 @@ int ADS1256::disable_event() {
   return ADS1256::gpio_reconfig(1);
 }
 
-//セルフキャリブレーション
+// セルフキャリブレーション
 int ADS1256::selfCal(void) {
   __u8 tx = 0b11110000;
   struct spi_ioc_transfer arg = {0};
 
-  arg.tx_buf = (__u64)&tx;
-  arg.rx_buf = (__u64)NULL;
+  arg.tx_buf = reinterpret_cast<uintptr_t>(&tx);
+  arg.rx_buf = 0;
   arg.len = 1;
   arg.delay_usecs = 0;
   arg.speed_hz = speed;
@@ -295,16 +295,16 @@ int ADS1256::AnalogReadRaw(void) {
   __u8 tx = 0b00000001;
   __u8 rx[3] = {0};
 
-  arg[0].tx_buf = (__u64)&tx;
-  arg[0].rx_buf = (__u64)NULL;
+  arg[0].tx_buf = reinterpret_cast<uintptr_t>(&tx);
+  arg[0].rx_buf = 0;
   arg[0].len = 1;
   arg[0].delay_usecs = delay_sclk;
   arg[0].speed_hz = speed;
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
 
-  arg[1].tx_buf = (__u64)NULL;
-  arg[1].rx_buf = (__u64)rx;
+  arg[1].tx_buf = 0;
+  arg[1].rx_buf = reinterpret_cast<uintptr_t>(rx);
   arg[1].len = 3;
   arg[1].delay_usecs = 0;
   arg[1].speed_hz = speed;
@@ -330,16 +330,16 @@ int ADS1256::AnalogReadRawSync(struct timeval *t) {
   __u8 tx = 0b00000001;
   __u8 rx[3] = {0};
 
-  arg[0].tx_buf = (__u64)&tx;
-  arg[0].rx_buf = (__u64)NULL;
+  arg[0].tx_buf = reinterpret_cast<uintptr_t>(&tx);
+  arg[0].rx_buf = 0;
   arg[0].len = 1;
   arg[0].delay_usecs = delay_sclk;
   arg[0].speed_hz = speed;
   arg[0].bits_per_word = 8;
   arg[0].cs_change = 0;
 
-  arg[1].tx_buf = (__u64)NULL;
-  arg[1].rx_buf = (__u64)rx;
+  arg[1].tx_buf = 0;
+  arg[1].rx_buf = reinterpret_cast<uintptr_t>(rx);
   arg[1].len = 3;
   arg[1].delay_usecs = 0;
   arg[1].speed_hz = speed;
@@ -358,12 +358,16 @@ int ADS1256::AnalogReadRawSync(struct timeval *t) {
   return (rx[0] << 16) | (rx[1] << 8) | rx[2];
 }
 
-//生データを電圧に変換
+// 生データを電圧に変換
 double ADS1256::convertVolt(int raw) {
   if ((raw & _BITULL(23)) > 0) {
-    return -1 * double(((~raw) + 1) & 0x7FFFFF) * 2 * VREF / (GAIN * 0x7FFFFF);
+    return -1 * static_cast<double>(((~raw) + 1) & 0x7FFFFF) * 2 * VREF /
+           /*-----------------------------------------------------------*/
+           (GAIN * 0x7FFFFF);
   } else {
-    return double(raw) * 2 * VREF / (GAIN * 0x7FFFFF);
+    return static_cast<double>(raw) * 2 * VREF /
+           /*---------------------------------*/
+           (GAIN * 0x7FFFFF);
   }
 }
 

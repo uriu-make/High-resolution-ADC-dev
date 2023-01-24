@@ -8,31 +8,32 @@ RUN useradd -m $USERNAME
 RUN usermod -aG sudo $USERNAME
 RUN usermod --shell /bin/bash $USERNAME
 
-RUN apt-get update -q
-RUN apt-get upgrade -q -y
-RUN apt-get install -y\
-    sudo\
-    bash-completion\
+RUN apt-get update
+RUN apt-get upgrade -y
+RUN apt-get install -y \
+    sudo \
+    bash-completion \
     # build-essential\
-    gnupg2\
-    gdb\
-    gdb-multiarch\
-    rsync\
-    make\
-    cmake\
-    git\
-    nano\
-    avahi-utils\
-    iputils-ping\
-    cmake\
-    x11-apps\
-    libgl1-mesa-dev\
+    gnupg2 \
+    gdb \
+    gdb-multiarch \
+    rsync \
+    make \
+    cmake \
+    git \
+    nano \
+    avahi-utils \
+    iputils-ping \
+    cmake \
+    x11-apps \
+    libgl1-mesa-dev \
     xorg-dev
 
 RUN dpkg --add-architecture $ARCH
 RUN apt-get update -q
 RUN apt-get install -y \
-    crossbuild-essential-$ARCH
+    crossbuild-essential-$ARCH \
+    libopenblas64-dev:$ARCH
 
 RUN apt-get upgrade -y
 
