@@ -31,6 +31,11 @@ struct sample_data {
   int64_t t[10000];
 };
 
+struct fft_data {
+  std::complex<double> F[N];
+  double freq_bin;
+};
+
 ADS1256 ads1256("/dev/spidev0.0", "/dev/gpiochip0", DRDY, RESET, SYNC, ADS1256_CLOCK);
 
 class APP {
@@ -192,9 +197,11 @@ void APP::write_socket(int sock) {
   }
 
   DOWNSAMPLING dsp(N * 64, N);
-  std::complex<double> F[N];
+  // std::complex<double> F[N];
   struct send_data copy;
   struct sample_data sample_copy;
+  struct fft_data fft_send;
+  fft_send.freq_bin = 1.0 / static_cast<double>(N * 1 / N);
 
   while (!com.kill) {
     if (run_measure) {
@@ -216,8 +223,8 @@ void APP::write_socket(int sock) {
         memcpy(&sample_copy, &sample, sizeof(struct sample_data));
         sample.len = -1;
         pthread_spin_unlock(spin);
-        dsp.calc(sample_copy.t, sample_copy.volt, sample_copy.len + 1, F);
-        if (send(sock, &F, sizeof(F), 0) < 0) {
+        dsp.calc(sample_copy.t, sample_copy.volt, sample_copy.len + 1, fft_send.F);
+        if (send(sock, &fft_send, sizeof(fft_send), 0) < 0) {
           com.kill = 1;
           break;
         }
