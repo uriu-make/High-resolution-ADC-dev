@@ -171,6 +171,9 @@ void APP::getADC() {
           sample.t[sample.len] = time.tv_sec * 1000000 + time.tv_usec;
           pthread_spin_unlock(spin);
         }
+        pthread_spin_lock(spin);
+        sample.len = -1;
+        pthread_spin_unlock(spin);
       } else {
         while (run_measure) {
           pthread_spin_lock(spin);
@@ -180,6 +183,9 @@ void APP::getADC() {
           sample.t[sample.len] = time.tv_sec * 1000000 + time.tv_usec;
           pthread_spin_unlock(spin);
         }
+        pthread_spin_lock(spin);
+        sample.len = -1;
+        pthread_spin_unlock(spin);
       }
     }
   }
@@ -196,7 +202,7 @@ void APP::write_socket(int sock) {
     exit(0);
   }
 
-  DOWNSAMPLING dsp(N * 64, N);
+  DOWNSAMPLING dsp(20000, N);
   // std::complex<double> F[N];
   struct send_data copy;
   struct sample_data sample_copy;
@@ -223,10 +229,11 @@ void APP::write_socket(int sock) {
         memcpy(&sample_copy, &sample, sizeof(struct sample_data));
         sample.len = -1;
         pthread_spin_unlock(spin);
-        dsp.calc(sample_copy.t, sample_copy.volt, sample_copy.len + 1, fft_send.F);
-        if (send(sock, &fft_send, sizeof(fft_send), 0) < 0) {
-          com.kill = 1;
-          break;
+        if (dsp.calc(sample_copy.t, sample_copy.volt, sample_copy.len + 1, fft_send.F) == 0) {
+          if (send(sock, &fft_send, sizeof(fft_send), 0) < 0) {
+            com.kill = 1;
+            break;
+          }
         }
       }
     } else {

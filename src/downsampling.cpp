@@ -27,6 +27,8 @@ int DOWNSAMPLING::sampling(int64_t *t, double *v, std::complex<double> *sample, 
       if (tmp < 1000000 * rate * (static_cast<double>(j) + 1.0)) {
         ave_buf += buf_v[i];
         count++;
+      } else if (count == 0) {
+        return -1;
       } else {
         sample[j] = std::complex<double>(ave_buf / static_cast<double>(count), 0.0);
         count = 0;
@@ -62,14 +64,17 @@ void DOWNSAMPLING::fft(std::complex<double> *f, int len) {
   }
 }
 
-void DOWNSAMPLING::calc(int64_t *t, double *v, int len, std::complex<double> *F) {
+int DOWNSAMPLING::calc(int64_t *t, double *v, int len, std::complex<double> *F) {
   if (sampling(t, v, F, len) == 0) {
     fft(F, N);
+    return 0;
+  } else {
+    return -1;
   }
 }
 
 void DOWNSAMPLING::clear() {
-  for (int i = 0; i < N; i++) {
+  for (int i = 0; i < size; i++) {
     buf_t[i] = 0;
     buf_v[i] = 0.0;
   }
