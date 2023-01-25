@@ -24,4 +24,5 @@ class DOWNSAMPLING {
   int sampling(int64_t *t, double *v, std::complex<double> *sample, int len);
   void fft(std::complex<double> *F, int len);
   void calc(int64_t *t, double *v, int len, std::complex<double> *F);
+  void clear();
 };

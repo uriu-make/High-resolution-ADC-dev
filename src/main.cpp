@@ -32,8 +32,8 @@ struct sample_data {
 };
 
 struct fft_data {
-  std::complex<double> F[N];
   double freq_bin;
+  std::complex<double> F[N];
 };
 
 ADS1256 ads1256("/dev/spidev0.0", "/dev/gpiochip0", DRDY, RESET, SYNC, ADS1256_CLOCK);
@@ -229,6 +229,8 @@ void APP::write_socket(int sock) {
           break;
         }
       }
+    } else {
+      dsp.clear();
     }
   }
 }

@@ -67,3 +67,10 @@ void DOWNSAMPLING::calc(int64_t *t, double *v, int len, std::complex<double> *F)
     fft(F, N);
   }
 }
+
+void DOWNSAMPLING::clear() {
+  for (int i = 0; i < N; i++) {
+    buf_t[i] = 0;
+    buf_v[i] = 0.0;
+  }
+}
