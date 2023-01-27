@@ -203,7 +203,6 @@ void APP::write_socket(int sock) {
   }
 
   DOWNSAMPLING dsp(20000, N);
-  // std::complex<double> F[N];
   struct send_data copy;
   struct sample_data sample_copy;
   struct fft_data fft_send;
