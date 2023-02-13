@@ -14,8 +14,8 @@ int DOWNSAMPLING::sampling(int64_t *t, double *v, std::complex<double> *sample, 
   int64_t tmp = 0;
   double ave_buf = 0.0;
 
-  memcpy(buf_t, &buf_t[len], sizeof(uint64_t) * (size - len));
-  memcpy(buf_v, &buf_v[len], sizeof(double) * (size - len));
+  memmove(buf_t, &buf_t[len], sizeof(uint64_t) * (size - len));
+  memmove(buf_v, &buf_v[len], sizeof(double) * (size - len));
   memcpy(&buf_t[size - len], t, sizeof(uint64_t) * len);
   memcpy(&buf_v[size - len], v, sizeof(double) * len);
 
