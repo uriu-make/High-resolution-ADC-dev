@@ -13,7 +13,7 @@ RUN apt-get upgrade -y
 RUN apt-get install -y \
     sudo \
     bash-completion \
-    # build-essential\
+    locales \
     gnupg2 \
     gdb \
     gdb-multiarch \
@@ -50,5 +50,8 @@ ENV CROSSBUILD=${CROSSBUILD}
 ENV CC=${CROSSBUILD}-gcc
 ENV CXX=${CROSSBUILD}-g++
 ENV TZ=Asia/Tokyo
+RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+RUN locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8
 
 USER $USERNAME
