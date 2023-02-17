@@ -311,11 +311,8 @@ int ADS1256::AnalogReadRaw(void) {
   arg[1].bits_per_word = 8;
   arg[1].cs_change = 0;
 
-  // ADS1256::gpio_reset();
-  // ADS1256::enable_event();
   ADS1256::gpio_get_event(&event);
   ADS1256::spi_transfer(arg, 2);
-  // ADS1256::disable_event();
   return (rx[0] << 16) | (rx[1] << 8) | rx[2];
 }
 
